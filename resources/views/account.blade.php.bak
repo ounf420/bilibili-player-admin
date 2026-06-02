@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账号中心 - DPlayer 广告系统</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #00a1d6;
+            --primary-dark: #0088b9;
+            --primary-light: #e8f7fc;
+            --accent: #fb7299;
+            --bg: #f5f7fa;
+            --bg-card: #ffffff;
+            --text: #1a1a2e;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --border: #e5e7eb;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.04);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.08);
+            --radius: 12px;
+            --radius-lg: 16px;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        a { text-decoration: none; color: inherit; }
+
+        /* NAVBAR */
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+        .navbar-inner {
+            max-width: 1200px; margin: 0 auto; padding: 0 24px;
+            height: 64px; display: flex; align-items: center; justify-content: space-between;
+        }
+        .navbar-brand {
+            display: flex; align-items: center; gap: 10px;
+            font-weight: 700; font-size: 18px; color: var(--text);
+        }
+        .navbar-brand .logo-icon {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 18px;
+        }
+        .navbar-links { display: flex; align-items: center; gap: 8px; }
+        .navbar-links a {
+            padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500;
+            color: var(--text-secondary); transition: all 0.2s;
+        }
+        .navbar-links a:hover { color: var(--primary); background: var(--primary-light); }
+        .navbar-links a.active { color: var(--primary); background: var(--primary-light); }
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: var(--text);
+            cursor: pointer;
+            padding: 8px;
+        }
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;
+            cursor: pointer; border: none; transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff; box-shadow: 0 2px 8px rgba(0,161,214,0.3);
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,161,214,0.4); }
+        .btn-outline { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
+        .btn-outline:hover { background: var(--primary-light); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-sm { padding: 8px 16px; font-size: 13px; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* LAYOUT */
+        .page-container {
+            max-width: 1200px; margin: 0 auto; padding: 88px 24px 40px;
+            display: grid; grid-template-columns: 280px 1fr; gap: 24px;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            position: sticky; top: 88px; height: fit-content;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow);
+        }
+        .user-profile {
+            text-align: center; padding-bottom: 20px; border-bottom: 1px solid var(--border);
+            margin-bottom: 16px;
+        }
+        .user-avatar {
+            width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 12px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 32px; color: #fff; font-weight: 700;
+            overflow: hidden;
+        }
+        .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .user-name { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+        .user-id { font-size: 12px; color: var(--text-muted); }
+        .user-badge {
+            display: inline-block; padding: 2px 10px; border-radius: 10px;
+            font-size: 11px; font-weight: 600; margin-top: 8px;
+            background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff;
+        }
+        .sidebar-menu { list-style: none; }
+        .sidebar-menu li a {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 16px; border-radius: 10px; font-size: 14px; font-weight: 500;
+            color: var(--text-secondary); transition: all 0.2s; cursor: pointer;
+        }
+        .sidebar-menu li a:hover { background: var(--primary-light); color: var(--primary); }
+        .sidebar-menu li a.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+        .sidebar-menu li a i { width: 20px; text-align: center; }
+
+        /* MAIN CONTENT */
+        .main-content { min-width: 0; }
+        .section-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); padding: 28px; margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+        .section-title {
+            font-size: 18px; font-weight: 600; margin-bottom: 20px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .section-title i { color: var(--primary); }
+
+        /* FORM */
+        .form-group {
+            display: flex; align-items: center; padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .form-group:last-child { border-bottom: none; }
+        .form-label {
+            width: 140px; flex-shrink: 0; font-size: 14px; font-weight: 500;
+            color: var(--text-secondary);
+        }
+        .form-value { flex: 1; font-size: 14px; }
+        .form-action { flex-shrink: 0; margin-left: 16px; }
+        .form-input {
+            width: 100%; max-width: 320px; padding: 10px 14px;
+            border: 1px solid var(--border); border-radius: 8px;
+            font-size: 14px; outline: none; transition: border-color 0.2s;
+        }
+        .form-input:focus { border-color: var(--primary); }
+        .form-input::placeholder { color: var(--text-muted); }
+
+        /* BADGES */
+        .badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;
+        }
+        .badge-success { background: #d1fae5; color: #059669; }
+        .badge-warning { background: #fef3c7; color: #d97706; }
+        .badge-danger { background: #fee2e2; color: #dc2626; }
+        .badge-info { background: #dbeafe; color: #2563eb; }
+
+        /* SECURITY ITEMS */
+        .security-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px; border: 1px solid var(--border); border-radius: var(--radius);
+            margin-bottom: 12px; transition: all 0.2s;
+        }
+        .security-item:hover { border-color: var(--primary); box-shadow: var(--shadow-md); }
+        .security-item-left { display: flex; align-items: center; gap: 14px; }
+        .security-item-icon {
+            width: 44px; height: 44px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+        }
+        .security-item-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+        .security-item-info p { font-size: 12px; color: var(--text-muted); }
+
+        /* SOCIAL BINDING */
+        .social-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px; border: 1px solid var(--border); border-radius: var(--radius);
+            margin-bottom: 12px;
+        }
+        .social-item-left { display: flex; align-items: center; gap: 14px; }
+        .social-icon {
+            width: 44px; height: 44px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; color: #fff;
+        }
+        .social-icon.wechat { background: #07c160; }
+        .social-icon.qq { background: #12b7f5; }
+        .social-icon.weibo { background: #e6162d; }
+        .social-icon.github { background: #333; }
+        .social-info h4 { font-size: 14px; font-weight: 600; }
+        .social-info p { font-size: 12px; color: var(--text-muted); }
+
+        /* MEMBERSHIP */
+        .membership-card {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: var(--radius-lg); padding: 28px; color: #fff;
+            position: relative; overflow: hidden;
+        }
+        .membership-card::before {
+            content: ''; position: absolute; top: -50px; right: -50px;
+            width: 200px; height: 200px;
+            background: radial-gradient(circle, rgba(251,114,153,0.3) 0%, transparent 70%);
+        }
+        .membership-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; position: relative;
+        }
+        .membership-title { font-size: 20px; font-weight: 700; }
+        .membership-badge {
+            padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+        .membership-info { position: relative; }
+        .membership-info p { font-size: 14px; opacity: 0.9; margin-bottom: 6px; }
+        .membership-expire { font-size: 12px; opacity: 0.7; }
+        .membership-features {
+            display: flex; gap: 24px; margin-top: 20px; padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1); position: relative;
+        }
+        .membership-feature { text-align: center; }
+        .membership-feature i { font-size: 20px; margin-bottom: 6px; display: block; }
+        .membership-feature span { font-size: 12px; opacity: 0.8; }
+
+        /* TOGGLE */
+        .toggle-switch {
+            position: relative; width: 48px; height: 26px; cursor: pointer;
+        }
+        .toggle-switch input { display: none; }
+        .toggle-slider {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: #ddd; border-radius: 13px; transition: all 0.3s;
+        }
+        .toggle-slider::before {
+            content: ''; position: absolute; top: 3px; left: 3px;
+            width: 20px; height: 20px; background: #fff;
+            border-radius: 50%; transition: all 0.3s;
+        }
+        .toggle-switch input:checked + .toggle-slider { background: var(--primary); }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(22px); }
+
+        /* HISTORY */
+        .history-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 0; border-bottom: 1px solid var(--border);
+        }
+        .history-item:last-child { border-bottom: none; }
+        .history-left { display: flex; align-items: center; gap: 12px; }
+        .history-icon {
+            width: 36px; height: 36px; border-radius: 8px;
+            background: var(--bg); display: flex; align-items: center; justify-content: center;
+            color: var(--text-muted); font-size: 14px;
+        }
+        .history-info h4 { font-size: 13px; font-weight: 500; }
+        .history-info p { font-size: 12px; color: var(--text-muted); }
+        .history-time { font-size: 12px; color: var(--text-muted); }
+
+        /* DANGER */
+        .danger-zone { border: 1px solid #fecaca; background: #fef2f2; }
+        .danger-zone .section-title { color: var(--danger); }
+        .danger-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px; background: #fff; border: 1px solid #fecaca;
+            border-radius: var(--radius); margin-bottom: 10px;
+        }
+        .danger-item-info h4 { font-size: 14px; font-weight: 600; color: var(--danger); }
+        .danger-item-info p { font-size: 12px; color: var(--text-muted); }
+
+        /* LOADING */
+        .loading { text-align: center; padding: 40px; color: var(--text-muted); }
+        .loading i { font-size: 24px; margin-bottom: 12px; }
+
+        /* TOAST */
+        .toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px);
+            padding: 12px 24px; border-radius: 8px; font-size: 14px;
+            z-index: 9999; transition: transform 0.3s; color: #fff;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast-success { background: #10b981; }
+        .toast-error { background: #ef4444; }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 2000;
+            display: none; align-items: center; justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: #fff; border-radius: var(--radius-lg); padding: 32px;
+            max-width: 420px; width: 90%; box-shadow: var(--shadow-lg);
+        }
+        .modal h3 { font-size: 18px; margin-bottom: 16px; }
+        .modal .form-group { border: none; padding: 0; margin-bottom: 16px; flex-direction: column; align-items: flex-start; }
+        .modal .form-label { width: auto; margin-bottom: 8px; }
+        .modal .form-input { max-width: 100%; }
+        .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+
+        @media (max-width: 768px) {
+            .page-container { 
+                grid-template-columns: 1fr; 
+                padding: 80px 0 20px; 
+                gap: 0;
+            }
+            .mobile-menu-btn {
+                display: block;
+            }
+            .navbar-links {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--bg-card);
+                border-bottom: 1px solid var(--border);
+                box-shadow: var(--shadow-md);
+                padding: 8px;
+                flex-direction: column;
+                animation: slideDown 0.2s ease;
+            }
+            @keyframes slideDown {
+                from {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            .navbar-links.open {
+                display: flex;
+            }
+            .navbar-links a {
+                padding: 12px 16px;
+                border-radius: 8px;
+            }
+            .sidebar { 
+                position: sticky; 
+                top: 64px; 
+                z-index: 100;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+                padding: 16px;
+                box-shadow: var(--shadow-md);
+            }
+            .user-profile {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding-bottom: 12px;
+                margin-bottom: 12px;
+            }
+            .user-avatar {
+                width: 48px;
+                height: 48px;
+                font-size: 20px;
+                margin: 0;
+                flex-shrink: 0;
+            }
+            .user-info {
+                flex: 1;
+                min-width: 0;
+            }
+            .user-name {
+                font-size: 16px;
+                margin-bottom: 2px;
+            }
+            .user-id {
+                font-size: 11px;
+            }
+            .user-badge {
+                margin-top: 4px;
+            }
+            .sidebar-menu {
+                display: flex;
+                overflow-x: auto;
+                gap: 8px;
+                padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .sidebar-menu::-webkit-scrollbar {
+                display: none;
+            }
+            .sidebar-menu li {
+                flex-shrink: 0;
+            }
+            .sidebar-menu li a {
+                padding: 8px 14px;
+                font-size: 13px;
+                white-space: nowrap;
+                border-radius: 20px;
+                background: var(--bg);
+                border: 1px solid var(--border);
+            }
+            .sidebar-menu li a.active {
+                background: var(--primary);
+                color: #fff;
+                border-color: var(--primary);
+                box-shadow: 0 2px 8px rgba(0,161,214,0.3);
+            }
+            .sidebar-menu li a i {
+                display: none;
+            }
+            .main-content {
+                padding: 16px;
+            }
+            .section-card {
+                border-radius: var(--radius);
+                padding: 20px;
+            }
+            .form-group { 
+                flex-direction: column; 
+                align-items: flex-start; 
+                gap: 8px; 
+                padding: 12px 0;
+            }
+            .form-label { 
+                width: auto; 
+                font-size: 13px;
+            }
+            .form-value {
+                width: 100%;
+            }
+            .form-input {
+                max-width: 100%;
+            }
+            .form-action { 
+                margin-left: 0; 
+                margin-top: 8px; 
+            }
+            .membership-features { 
+                flex-wrap: wrap; 
+                gap: 16px; 
+            }
+            .security-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            .security-item-left {
+                width: 100%;
+            }
+            .social-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .navbar-inner {
+                padding: 0 16px;
+            }
+            .navbar-links a {
+                padding: 6px 10px;
+                font-size: 13px;
+            }
+            .sidebar {
+                padding: 12px;
+            }
+            .sidebar-menu {
+                gap: 6px;
+            }
+            .sidebar-menu li a {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+            .section-card {
+                padding: 16px;
+            }
+            .section-title {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+    <div class="navbar-inner">
+        <a href="/" class="navbar-brand">
+            <div class="logo-icon"><i class="fas fa-play"></i></div>
+            <span>DPlayer 广告系统</span>
+        </a>
+        <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="navbar-links" id="navLinks">
+            <a href="/">首页</a>
+            <a href="/player">播放器</a>
+            <a href="/account" class="active">账号中心</a>
+            <a href="#" id="logoutBtn" style="color:var(--danger);">退出</a>
+        </div>
+    </div>
+</nav>
+
+<!-- MAIN -->
+<div class="page-container">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="user-profile">
+            <div class="user-avatar" id="userAvatar">?</div>
+            <div class="user-info">
+                <div class="user-name" id="userName">加载中...</div>
+                <div class="user-id" id="userId">ID: ---</div>
+                <div class="user-badge" id="userBadge" style="display:none;">普通用户</div>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="#security" class="active"><i class="fas fa-shield-alt"></i> 账号安全</a></li>
+            <li><a href="#profile"><i class="fas fa-user"></i> 账号信息</a></li>
+            <li><a href="#social"><i class="fas fa-link"></i> 第三方绑定</a></li>
+            <li><a href="#membership"><i class="fas fa-crown"></i> 会员订阅</a></li>
+            <li><a href="#privacy"><i class="fas fa-eye-slash"></i> 隐私设置</a></li>
+            <li><a href="#danger"><i class="fas fa-exclamation-triangle"></i> 账号注销</a></li>
+        </ul>
+    </aside>
+
+    <!-- CONTENT -->
+    <main class="main-content" id="mainContent">
+        <div class="loading">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>加载中...</p>
+        </div>
+    </main>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="passwordModal">
+    <div class="modal">
+        <h3>修改密码</h3>
+        <div class="form-group">
+            <label class="form-label">原密码</label>
+            <input type="password" class="form-input" id="oldPassword" placeholder="请输入原密码">
+        </div>
+        <div class="form-group">
+            <label class="form-label">新密码</label>
+            <input type="password" class="form-input" id="newPassword" placeholder="至少6位">
+        </div>
+        <div class="form-group">
+            <label class="form-label">确认密码</label>
+            <input type="password" class="form-input" id="confirmNewPassword" placeholder="再次输入新密码">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal('passwordModal')">取消</button>
+            <button class="btn btn-primary" id="changePasswordBtn">确认修改</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="nicknameModal">
+    <div class="modal">
+        <h3>修改昵称</h3>
+        <div class="form-group">
+            <label class="form-label">新昵称</label>
+            <input type="text" class="form-input" id="newNickname" placeholder="请输入新昵称">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal('nicknameModal')">取消</button>
+            <button class="btn btn-primary" id="saveNicknameBtn">保存</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+    const API_BASE = '/api';
+    let currentUser = null;
+    
+    function getToken() { return localStorage.getItem('token'); }
+    
+    function toggleMobileMenu() {
+        const navLinks = document.getElementById('navLinks');
+        navLinks.classList.toggle('open');
+    }
+    
+    function showToast(msg, type = 'success') {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = `toast toast-${type} show`;
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+    
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('show');
+    }
+    
+    async function api(path, options = {}) {
+        const token = getToken();
+        const headers = { 'Content-Type': 'application/json', ...options.headers };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        
+        const res = await fetch(API_BASE + path, { ...options, headers });
+        return res.json();
+    }
+    
+    // 检查登录状态
+    async function checkAuth() {
+        if (!getToken()) {
+            window.location.href = '/login';
+            return;
+        }
+        
+        try {
+            const data = await api('/auth/me');
+            if (data.success) {
+                currentUser = data.data.user;
+                renderUserInfo();
+                renderContent();
+                loadSocialBindings();
+            } else {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('加载失败', 'error');
+        }
+    }
+    
+    // 渲染用户信息
+    function renderUserInfo() {
+        document.getElementById('userAvatar').textContent = currentUser.nickname ? currentUser.nickname[0] : '?';
+        document.getElementById('userName').textContent = currentUser.nickname || currentUser.username;
+        document.getElementById('userId').textContent = 'ID: ' + currentUser.id;
+        
+        const badge = document.getElementById('userBadge');
+        if (currentUser.vip_level > 0) {
+            badge.textContent = '👑 ' + currentUser.vip_level_name;
+            badge.style.display = 'inline-block';
+        }
+    }
+    
+    // 渲染内容
+    function renderContent() {
+        const content = document.getElementById('mainContent');
+        content.innerHTML = `
+            <!-- 账号安全 -->
+            <div class="section-card" id="security">
+                <div class="section-title"><i class="fas fa-shield-alt"></i> 账号安全</div>
+                
+                <div class="security-item">
+                    <div class="security-item-left">
+                        <div class="security-item-icon" style="background:#dbeafe;color:#2563eb;"><i class="fas fa-lock"></i></div>
+                        <div class="security-item-info">
+                            <h4>登录密码</h4>
+                            <p>已设置，建议定期更换密码</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline btn-sm" onclick="document.getElementById('passwordModal').classList.add('show')">修改密码</button>
+                </div>
+                
+                <div class="security-item">
+                    <div class="security-item-left">
+                        <div class="security-item-icon" style="background:#d1fae5;color:#059669;"><i class="fas fa-mobile-alt"></i></div>
+                        <div class="security-item-info">
+                            <h4>绑定手机</h4>
+                            <p>${currentUser.phone ? '已绑定：' + currentUser.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '未绑定'}</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline btn-sm">${currentUser.phone ? '更换手机' : '绑定手机'}</button>
+                </div>
+                
+                <div class="security-item">
+                    <div class="security-item-left">
+                        <div class="security-item-icon" style="background:#fef3c7;color:#d97706;"><i class="fas fa-envelope"></i></div>
+                        <div class="security-item-info">
+                            <h4>绑定邮箱</h4>
+                            <p>${currentUser.email ? '已绑定：' + currentUser.email.replace(/(.{2}).*(@.*)/, '$1***$2') : '未绑定'}</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline btn-sm">更换邮箱</button>
+                </div>
+                
+                <div class="security-item">
+                    <div class="security-item-left">
+                        <div class="security-item-icon" style="background:#ede9fe;color:#7c3aed;"><i class="fas fa-key"></i></div>
+                        <div class="security-item-info">
+                            <h4>两步验证</h4>
+                            <p>未开启，建议开启以提高安全性</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-sm">开启验证</button>
+                </div>
+            </div>
+
+            <!-- 登录历史 -->
+            <div class="section-card">
+                <div class="section-title"><i class="fas fa-history"></i> 最近登录</div>
+                <div class="history-item">
+                    <div class="history-left">
+                        <div class="history-icon"><i class="fas fa-desktop"></i></div>
+                        <div class="history-info">
+                            <h4>当前设备</h4>
+                            <p>IP: ${currentUser.last_login_ip || '未知'}</p>
+                        </div>
+                    </div>
+                    <div class="history-time">${currentUser.last_login_at ? new Date(currentUser.last_login_at).toLocaleString('zh-CN') : '未知'}</div>
+                </div>
+            </div>
+
+            <!-- 账号信息 -->
+            <div class="section-card" id="profile">
+                <div class="section-title"><i class="fas fa-user"></i> 账号信息</div>
+                
+                <div class="form-group">
+                    <div class="form-label">头像</div>
+                    <div class="form-value">
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <div class="user-avatar" style="width:48px;height:48px;font-size:20px;">${currentUser.nickname ? currentUser.nickname[0] : '?'}</div>
+                            <button class="btn btn-outline btn-sm">更换头像</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="form-label">昵称</div>
+                    <div class="form-value">${currentUser.nickname || '未设置'}</div>
+                    <div class="form-action"><button class="btn btn-outline btn-sm" onclick="document.getElementById('nicknameModal').classList.add('show')">修改</button></div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="form-label">用户名</div>
+                    <div class="form-value">${currentUser.username}</div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="form-label">账号ID</div>
+                    <div class="form-value" style="color:var(--text-muted);">${currentUser.id}</div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="form-label">注册时间</div>
+                    <div class="form-value" style="color:var(--text-muted);">${new Date(currentUser.created_at).toLocaleString('zh-CN')}</div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="form-label">性别</div>
+                    <div class="form-value">${currentUser.gender_name || '未设置'}</div>
+                    <div class="form-action"><button class="btn btn-outline btn-sm">修改</button></div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="form-label">生日</div>
+                    <div class="form-value">${currentUser.birthday || '未设置'}</div>
+                    <div class="form-action"><button class="btn btn-outline btn-sm">修改</button></div>
+                </div>
+            </div>
+
+            <!-- 第三方绑定 -->
+            <div class="section-card" id="social">
+                <div class="section-title"><i class="fas fa-link"></i> 第三方绑定</div>
+                <div id="socialBindings">加载中...</div>
+            </div>
+
+            <!-- 会员订阅 -->
+            <div class="section-card" id="membership">
+                <div class="section-title"><i class="fas fa-crown"></i> 会员订阅</div>
+                
+                <div class="membership-card">
+                    <div class="membership-header">
+                        <div class="membership-title">${currentUser.is_vip ? '👑 ' + currentUser.vip_level_name : '💎 升级会员'}</div>
+                        <div class="membership-badge">${currentUser.is_vip ? '有效' : '未开通'}</div>
+                    </div>
+                    <div class="membership-info">
+                        <p>${currentUser.is_vip ? '尊享特权：免广告、高清画质、专属客服' : '开通会员享受免广告、高清画质等特权'}</p>
+                        <div class="membership-expire">${currentUser.vip_expire_at ? '到期时间：' + new Date(currentUser.vip_expire_at).toLocaleDateString('zh-CN') : ''}</div>
+                    </div>
+                    <div class="membership-features">
+                        <div class="membership-feature"><i class="fas fa-ban"></i><span>免广告</span></div>
+                        <div class="membership-feature"><i class="fas fa-hd"></i><span>4K超清</span></div>
+                        <div class="membership-feature"><i class="fas fa-download"></i><span>离线缓存</span></div>
+                        <div class="membership-feature"><i class="fas fa-headset"></i><span>专属客服</span></div>
+                    </div>
+                </div>
+                
+                <div style="margin-top:16px;display:flex;gap:12px;">
+                    <button class="btn btn-primary">${currentUser.is_vip ? '续费会员' : '立即开通'}</button>
+                    ${currentUser.is_vip ? '<button class="btn btn-outline">升级钻石会员</button>' : ''}
+                </div>
+            </div>
+
+            <!-- 数据导出 -->
+            <div class="section-card">
+                <div class="section-title"><i class="fas fa-download"></i> 数据导出</div>
+                <p style="font-size:14px;color:var(--text-secondary);margin-bottom:16px;">导出你的个人数据，包括账号信息、播放历史、收藏列表等。</p>
+                <button class="btn btn-outline" onclick="exportData()"><i class="fas fa-file-export"></i> 导出我的数据</button>
+            </div>
+
+            <!-- 账号注销 -->
+            <div class="section-card danger-zone" id="danger">
+                <div class="section-title"><i class="fas fa-exclamation-triangle"></i> 危险操作</div>
+                <div class="danger-item">
+                    <div class="danger-item-info">
+                        <h4>注销账号</h4>
+                        <p>永久删除账号及所有数据，此操作不可恢复</p>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="deleteAccount()">申请注销</button>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 修改密码
+    document.getElementById('changePasswordBtn').addEventListener('click', async () => {
+        const oldPassword = document.getElementById('oldPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+        
+        if (!oldPassword || !newPassword || newPassword.length < 6) {
+            showToast('请填写完整信息', 'error');
+            return;
+        }
+        
+        if (newPassword !== confirmNewPassword) {
+            showToast('两次密码不一致', 'error');
+            return;
+        }
+        
+        try {
+            const data = await api('/auth/change-password', {
+                method: 'POST',
+                body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
+            });
+            
+            if (data.success) {
+                showToast('密码修改成功');
+                closeModal('passwordModal');
+                document.getElementById('oldPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmNewPassword').value = '';
+            } else {
+                showToast(data.message || '修改失败', 'error');
+            }
+        } catch (err) {
+            showToast('网络错误', 'error');
+        }
+    });
+    
+    // 修改昵称
+    document.getElementById('saveNicknameBtn').addEventListener('click', async () => {
+        const nickname = document.getElementById('newNickname').value.trim();
+        
+        if (!nickname) {
+            showToast('请输入昵称', 'error');
+            return;
+        }
+        
+        try {
+            const data = await api('/auth/profile', {
+                method: 'PUT',
+                body: JSON.stringify({ nickname })
+            });
+            
+            if (data.success) {
+                currentUser.nickname = nickname;
+                renderUserInfo();
+                renderContent();
+                showToast('昵称修改成功');
+                closeModal('nicknameModal');
+            } else {
+                showToast(data.message || '修改失败', 'error');
+            }
+        } catch (err) {
+            showToast('网络错误', 'error');
+        }
+    });
+    
+    // 导出数据
+    async function exportData() {
+        try {
+            const data = await api('/auth/export-data');
+            if (data.success) {
+                const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `dplayer-account-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('数据导出成功');
+            }
+        } catch (err) {
+            showToast('导出失败', 'error');
+        }
+    }
+    
+    // 注销账号
+    async function deleteAccount() {
+        if (!confirm('确定要注销账号吗？此操作不可恢复！')) return;
+        
+        const password = prompt('请输入密码确认：');
+        if (!password) return;
+        
+        try {
+            const data = await api('/auth/delete-account', {
+                method: 'POST',
+                body: JSON.stringify({ password })
+            });
+            
+            if (data.success) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                showToast('账号已注销');
+                setTimeout(() => window.location.href = '/', 2000);
+            } else {
+                showToast(data.message || '注销失败', 'error');
+            }
+        } catch (err) {
+            showToast('网络错误', 'error');
+        }
+    }
+    
+    // 退出登录
+    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+        e.preventDefault();
+        
+        try {
+            await api('/auth/logout', { method: 'POST' });
+        } catch (err) {}
+        
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+    });
+    
+    // 侧边栏滚动高亮
+    const sections = document.querySelectorAll('.section-card[id]');
+    const menuLinks = document.querySelectorAll('.sidebar-menu a');
+    
+    // 关闭移动菜单
+    function closeMobileMenu() {
+        const navLinks = document.getElementById('navLinks');
+        navLinks.classList.remove('open');
+    }
+    
+    // 点击导航链接时关闭移动菜单
+    document.querySelectorAll('.navbar-links a').forEach(link => {
+        link.addEventListener('click', closeMobileMenu);
+    });
+    
+    // 点击页面其他区域关闭移动菜单
+    document.addEventListener('click', (e) => {
+        const navbar = document.querySelector('.navbar');
+        if (!navbar.contains(e.target)) {
+            closeMobileMenu();
+        }
+    });
+    
+    menuLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = link.getAttribute('href').substring(1);
+            const target = document.getElementById(targetId);
+            if (target) {
+                // 计算偏移量，考虑固定的导航栏和侧边栏
+                const offset = window.innerWidth <= 768 ? 180 : 100;
+                const targetPosition = target.offsetTop - offset;
+                window.scrollTo({
+                    top: targetPosition,
+                    behavior: 'smooth'
+                });
+            }
+        });
+    });
+    
+    window.addEventListener('scroll', () => {
+        let current = '';
+        sections.forEach(section => {
+            const top = section.offsetTop - 100;
+            if (window.scrollY >= top) {
+                current = section.getAttribute('id');
+            }
+        });
+        menuLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === '#' + current) {
+                link.classList.add('active');
+                // 移动端自动滚动菜单项到可视区域
+                if (window.innerWidth <= 768) {
+                    link.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                }
+            }
+        });
+    });
+    
+    // 第三方绑定相关
+    const PLATFORM_COLORS = {
+        qq: '#12b7f5', wx: '#07c160', alipay: '#1677ff', sina: '#e6162d',
+        baidu: '#2319dc', douyin: '#000', huawei: '#cf0a2c', xiaomi: '#ff6900',
+        microsoft: '#00a4ef', feishu: '#3370ff', dingtalk: '#0089ff', gitee: '#c71d23', github: '#333'
+    };
+    const PLATFORM_ICONS = {
+        qq: 'fab fa-qq', wx: 'fab fa-weixin', alipay: 'fab fa-alipay', sina: 'fab fa-weibo',
+        baidu: 'fab fa-baidu', douyin: 'fab fa-tiktok', huawei: 'fas fa-mobile-alt', xiaomi: 'fas fa-mobile',
+        microsoft: 'fab fa-microsoft', feishu: 'fas fa-paper-plane', dingtalk: 'fab fa-dingtalk', gitee: 'fab fa-git-alt', github: 'fab fa-github'
+    };
+
+    async function loadSocialBindings() {
+        const container = document.getElementById('socialBindings');
+        if (!container) return;
+        
+        try {
+            const data = await api('/socialite/bindings');
+            if (data.success) {
+                renderSocialBindings(data.data);
+            } else {
+                container.innerHTML = '<p style="color:var(--text-muted);font-size:14px;">加载失败</p>';
+            }
+        } catch (err) {
+            container.innerHTML = '<p style="color:var(--text-muted);font-size:14px;">加载失败</p>';
+        }
+    }
+
+    function renderSocialBindings(bindings) {
+        const container = document.getElementById('socialBindings');
+        container.innerHTML = bindings.map(item => `
+            <div class="social-item">
+                <div class="social-item-left">
+                    <div class="social-icon" style="background:${PLATFORM_COLORS[item.platform] || '#666'}">
+                        <i class="${PLATFORM_ICONS[item.platform] || 'fas fa-link'}"></i>
+                    </div>
+                    <div class="social-info">
+                        <h4>${item.name}</h4>
+                        <p>${item.bound ? '已绑定' + (item.nickname ? '：' + item.nickname : '') : '未绑定'}</p>
+                    </div>
+                </div>
+                ${item.bound 
+                    ? `<button class="btn btn-outline btn-sm" onclick="unbindSocial('${item.platform}')">解绑</button>`
+                    : `<button class="btn btn-primary btn-sm" onclick="bindSocial('${item.platform}')">绑定</button>`
+                }
+            </div>
+        `).join('');
+    }
+
+    async function bindSocial(platform) {
+        try {
+            const data = await api('/socialite/login?type=' + platform);
+            if (data.success && data.data.url) {
+                // 打开新窗口进行授权
+                const width = 600, height = 700;
+                const left = (screen.width - width) / 2;
+                const top = (screen.height - height) / 2;
+                const popup = window.open(data.data.url, 'socialite_' + platform, 
+                    `width=${width},height=${height},left=${left},top=${top}`);
+                
+                // 监听回调消息
+                window.addEventListener('message', async function handler(e) {
+                    if (e.data && e.data.platform === platform) {
+                        window.removeEventListener('message', handler);
+                        if (e.data.need_bind) {
+                            // 需要绑定到当前账号
+                            const bindResult = await api('/socialite/bind', {
+                                method: 'POST',
+                                body: JSON.stringify({ temp_key: e.data.temp_key })
+                            });
+                            if (bindResult.success) {
+                                showToast(bindResult.message, 'success');
+                                loadSocialBindings();
+                            } else {
+                                showToast(bindResult.message, 'error');
+                            }
+                        } else if (e.data.success) {
+                            showToast('登录成功', 'success');
+                            loadSocialBindings();
+                        } else {
+                            showToast(e.data.message || '操作失败', 'error');
+                        }
+                    }
+                });
+            } else {
+                showToast(data.message || '获取登录地址失败', 'error');
+            }
+        } catch (err) {
+            showToast('操作失败', 'error');
+        }
+    }
+
+    async function unbindSocial(platform) {
+        if (!confirm('确定要解绑该账号吗？')) return;
+        
+        try {
+            const data = await api('/socialite/unbind', {
+                method: 'POST',
+                body: JSON.stringify({ platform })
+            });
+            if (data.success) {
+                showToast(data.message, 'success');
+                loadSocialBindings();
+            } else {
+                showToast(data.message, 'error');
+            }
+        } catch (err) {
+            showToast('操作失败', 'error');
+        }
+    }
+
+    // 初始化
+    checkAuth();
+</script>
+
+</body>
+</html>

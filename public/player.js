@@ -1,0 +1,1327 @@
+/**
+ * 影视中心播放器 JS版 v1.0
+ * 使用方式：
+ *   <div id="my-player"></div>
+ *   <script src="http://dem.viesta.cn/player.js" data-container="#my-player" data-url="https://xxx.com/v.mp4"><\/script>
+ *
+ * 支持参数（data-xxx）：
+ *   container  - 挂载容器选择器（默认 #my-player）
+ *   v          - 系统视频ID
+ *   url        - 直接视频URL
+ *   type       - 视频类型 mp4/m3u8/flv
+ *   cover      - 封面图URL
+ *   autoplay   - 自动播放 true/false
+ *   theme      - 主题色
+ *   logo       - 水印图片URL
+ *   logo-text  - 水印文字
+ *   logo-pos   - 水印位置 tl/tr/bl/br
+ *   base       - API基础地址（默认当前域名）
+ */
+(function(){
+"use strict";
+
+var S=document.currentScript;
+var C={
+  container:S.getAttribute("data-container")||"#my-player",
+  v:S.getAttribute("data-v")||"",
+  url:S.getAttribute("data-url")||"",
+  type:S.getAttribute("data-type")||"",
+  cover:S.getAttribute("data-cover")||"",
+  autoplay:S.getAttribute("data-autoplay")!=="false",
+  theme:S.getAttribute("data-theme")||"#e6a817",
+  logo:S.getAttribute("data-logo")||"",
+  logoText:S.getAttribute("data-logo-text")||"",
+  logoPos:S.getAttribute("data-logo-pos")||"tr",
+  base:S.getAttribute("data-base")||""
+};
+
+// 注入样式
+var st=document.createElement("style");
+st.textContent="#"+C.container.replace("#","").replace(".","")+"{position:relative;width:100%;height:100%;background:#000}"+
+".ep-wm{position:absolute;z-index:100;pointer-events:none}"+
+".ep-wm.tl{top:12px;left:12px}.ep-wm.tr{top:12px;right:12px}"+
+".ep-wm.bl{bottom:60px;left:12px}.ep-wm.br{bottom:60px;right:12px}"+
+".ep-wm img{max-width:100px;max-height:32px;opacity:.7}"+
+".ep-wm span{color:rgba(255,255,255,.5);font-size:12px;text-shadow:0 1px 3px rgba(0,0,0,.5);user-select:none}";
+document.head.appendChild(st);
+
+// 加载CSS
+var lk=document.createElement("link");
+lk.rel="stylesheet";
+lk.href="https://cdn.jsdelivr.net/npm/dplayer@1.27.1/dist/DPlayer.min.css";
+document.head.appendChild(lk);
+
+// 加载JS
+function ld(src){return new Promise(function(r,j){var s=document.createElement("script");s.src=src;s.onload=r;s.onerror=j;document.head.appendChild(s)})}
+
+function dt(u){if(/\.m3u8(\?|$)/i.test(u))return"m3u8";if(/\.flv(\?|$)/i.test(u))return"flv";return"mp4"}
+
+async function init(){
+  // 加载依赖
+  await Promise.all([
+    ld("https://cdn.jsdelivr.net/npm/dplayer@1.27.1/dist/DPlayer.min.js"),
+    ld("https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"),
+    ld("https://cdn.jsdelivr.net/npm/flv.js@1.6.2/dist/flv.min.js")
+  ]);
+
+  // 注入广告引擎
+  /**
+ * DPlayer 推广管理系统 v5
+ * 画中画暂停推广 + 全推广随机抽取
+ */
+
+class MediaManager {
+    constructor(player, options = {}) {
+        this.player = player;
+        this.options = {
+            enabled: true,
+            ads: [],
+            ...options
+        };
+        
+        this.currentAd = null;
+        this.isAdPlaying = false;
+        this.timer = null;
+        this.adsLoaded = false;
+        this.onReady = null;
+        
+        this.init();
+    }
+    
+    init() {
+        this.createAdOverlay();
+        this.loadCampaigns();
+    }
+    
+    // 创建推广遮罩层（前贴片/后贴片用）
+    createAdOverlay() {
+        this.overlay = document.createElement('div');
+        this.overlay.className = 'media-overlay';
+        this.overlay.style.cssText = `
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 200;
+            display: none;
+            background: #000;
+            overflow: hidden;
+            box-sizing: border-box;
+        `;
+        this.player.container.appendChild(this.overlay);
+        
+        // 推广视频容器
+        this.promoVideoWrap = document.createElement('div');
+        this.promoVideoWrap.style.cssText = `width:100%;height:100%;position:relative;`;
+        this.overlay.appendChild(this.promoVideoWrap);
+        
+        // 推广视频元素
+        this.promoVideo = document.createElement('video');
+        this.promoVideo.style.cssText = `width:100%;height:100%;object-fit:contain;`;
+        this.promoVideo.setAttribute('playsinline', '');
+        this.promoVideo.setAttribute('webkit-playsinline', '');
+        this.promoVideo.setAttribute('preload', 'auto');
+        this.promoVideoWrap.appendChild(this.promoVideo);
+        
+        // 顶部信息栏
+        this.topBar = document.createElement('div');
+        this.topBar.style.cssText = `
+            position:absolute;top:0;left:0;width:100%;
+            padding:12px 20px;display:flex;justify-content:space-between;align-items:center;
+            z-index:201;background:linear-gradient(180deg,rgba(0,0,0,0.6) 0%,transparent 100%);
+            box-sizing:border-box;
+        `;
+        this.overlay.appendChild(this.topBar);
+        
+        // 左上：推广标签 + 倒计时
+        const topLeft = document.createElement('div');
+        topLeft.style.cssText = 'display:flex;align-items:center;gap:12px;';
+        this.topBar.appendChild(topLeft);
+        
+        this.promoBadge = document.createElement('div');
+        this.promoBadge.style.cssText = `
+            background:rgba(255,255,255,0.15);color:#fff;
+            padding:5px 12px;border-radius:4px;font-size:12px;letter-spacing:1px;
+        `;
+        this.promoBadge.textContent = '推广';
+        topLeft.appendChild(this.promoBadge);
+        
+        this.countdownWrap = document.createElement('div');
+        this.countdownWrap.style.cssText = `color:rgba(255,255,255,0.85);font-size:13px;`;
+        topLeft.appendChild(this.countdownWrap);
+        
+        // 右上：VIP + 跳过
+        const topRight = document.createElement('div');
+        topRight.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        this.topBar.appendChild(topRight);
+        
+        this.vipCloseBtn = document.createElement('button');
+        this.vipCloseBtn.style.cssText = `
+            background:linear-gradient(135deg,#f5d98e 0%,#c9a24e 100%);
+            color:#1a1a1a;border:none;padding:5px 14px;border-radius:14px;
+            font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;
+        `;
+        this.vipCloseBtn.textContent = 'VIP跳推广';
+        this.vipCloseBtn.onclick = () => { if (this.options.onOpenVip) this.options.onOpenVip(); };
+        topRight.appendChild(this.vipCloseBtn);
+        
+        this.skipBtn = document.createElement('button');
+        this.skipBtn.style.cssText = `
+            background:rgba(255,255,255,0.15);color:#fff;
+            border:1px solid rgba(255,255,255,0.25);
+            padding:5px 14px;border-radius:14px;font-size:11px;
+            cursor:pointer;display:none;white-space:nowrap;
+        `;
+        this.skipBtn.textContent = '关闭推广 ✕';
+        this.skipBtn.onclick = () => this.endAd();
+        topRight.appendChild(this.skipBtn);
+        
+        // 底部品牌栏
+        this.bottomBar = document.createElement('div');
+        this.bottomBar.style.cssText = `
+            position:absolute;bottom:0;left:0;width:100%;
+            padding:16px 20px;display:flex;justify-content:space-between;align-items:center;
+            z-index:201;background:linear-gradient(0deg,rgba(0,0,0,0.7) 0%,transparent 100%);
+            box-sizing:border-box;
+        `;
+        this.overlay.appendChild(this.bottomBar);
+        
+        // 品牌信息
+        this.brandInfo = document.createElement('div');
+        this.brandInfo.style.cssText = 'display:flex;align-items:center;gap:12px;flex:1;min-width:0;';
+        this.bottomBar.appendChild(this.brandInfo);
+        
+        this.brandLogo = document.createElement('img');
+        this.brandLogo.style.cssText = `
+            width:36px;height:36px;border-radius:6px;object-fit:cover;
+            border:1px solid rgba(255,255,255,0.2);display:none;
+        `;
+        this.brandInfo.appendChild(this.brandLogo);
+        
+        this.brandName = document.createElement('div');
+        this.brandName.style.cssText = `
+            color:#fff;font-size:14px;font-weight:500;
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+        `;
+        this.brandInfo.appendChild(this.brandName);
+        
+        this.ctaBtn = document.createElement('a');
+        this.ctaBtn.style.cssText = `
+            background:linear-gradient(135deg,#00c853 0%,#00a040 100%);
+            color:#fff;padding:8px 22px;border-radius:16px;text-decoration:none;
+            font-size:13px;font-weight:500;display:none;white-space:nowrap;
+            box-shadow:0 2px 10px rgba(0,200,83,0.3);transition:all 0.2s;
+        `;
+        this.ctaBtn.innerHTML = '了解更多 ›';
+        this.ctaBtn.onmouseover = () => this.ctaBtn.style.transform = 'translateY(-1px)';
+        this.ctaBtn.onmouseout = () => this.ctaBtn.style.transform = 'translateY(0)';
+        this.bottomBar.appendChild(this.ctaBtn);
+        
+        // 进度条
+        this.progressBar = document.createElement('div');
+        this.progressBar.style.cssText = `
+            position:absolute;bottom:56px;left:0;right:0;
+            height:2px;background:rgba(255,255,255,0.1);z-index:201;display:none;
+        `;
+        this.overlay.appendChild(this.progressBar);
+        
+        this.progressFill = document.createElement('div');
+        this.progressFill.style.cssText = `
+            height:100%;background:#00c853;border-radius:2px;width:0%;transition:width 1s linear;
+        `;
+        this.progressBar.appendChild(this.progressFill);
+        
+        // 推广视频事件
+        this.promoVideo.addEventListener('ended', () => this.endAd());
+        this.promoVideo.addEventListener('error', (e) => {
+            console.error('推广视频加载失败:', e);
+            this.endAd();
+        });
+        this.promoVideo.addEventListener('click', () => {
+            if (this.currentAd && this.currentAd.clickUrl) {
+                window.open(this.currentAd.clickUrl, '_blank');
+                this.trackEvent('click');
+            }
+        });
+    }
+    
+    // 加载推广配置
+    async loadCampaigns() {
+        try {
+            const [adsRes, settingsRes] = await Promise.all([
+                fetch('/api/campaigns'),
+                fetch('/api/settings')
+            ]);
+            const ads = await adsRes.json();
+            this.options.ads = ads.filter(ad => ad.enabled);
+            const settings = await settingsRes.json();
+            this.options.prerollDuration = settings.preroll_duration || 120;
+            this.options.midrollDuration = settings.midroll_duration || 60;
+            this.options.postrollDuration = settings.postroll_duration || 60;
+            this.adsLoaded = true;
+            console.log('推广加载完成:', this.options.ads.length, '条');
+            if (this.onReady) this.onReady();
+        } catch (err) {
+            console.error('加载推广配置失败:', err);
+            this.adsLoaded = true;
+        }
+    }
+    
+    async getAdPlayInfo(promoId) {
+        const res = await fetch(`/api/campaigns/${promoId}/play`);
+        if (!res.ok) throw new Error('获取推广播放地址失败');
+        const data = await res.json();
+        if (!data.success || !data.mediaUrl) throw new Error(data.error || '推广播放地址不存在');
+        return data;
+    }
+
+    // ========== 随机抽取推广 ==========
+    
+    /**
+     * 从指定类型的推广中随机抽取一条
+     * @param {string} type - 推广类型 (preroll/midroll/postroll/pause)
+     * @returns {object|null} - 推广对象或null
+     */
+    pickRandomAd(type) {
+        const candidates = this.options.ads.filter(ad => ad.type === type && ad.enabled);
+        if (candidates.length === 0) return null;
+        // 只有一条就直接返回，多条随机抽
+        const idx = Math.floor(Math.random() * candidates.length);
+        return candidates[idx];
+    }
+    
+    // ========== 前贴片（多条连续播放） ==========
+
+    /**
+     * 选取广告组合，按优先级填充时段
+     * @param {string} type - 广告类型 ('preroll'|'midroll'|'postroll')
+     * @param {number} slotDuration - 时段总时长（秒）
+     * @returns {Array} 排好序的广告列表
+     */
+    pickAdsForSlot(type, slotDuration) {
+        const allAds = this.options.ads
+            .filter(ad => ad.type === type && ad.enabled)
+            .sort((a, b) => (b.priority || 0) - (a.priority || 0));
+        if (allAds.length === 0) return [];
+        const maxDuration = slotDuration * 1.5;
+        const selected = [];
+        let totalDur = 0, roundIdx = 0;
+        while (totalDur < slotDuration) {
+            const ad = allAds[roundIdx % allAds.length];
+            if (!ad) break;
+            const adDur = ad.duration || 15;
+            if (totalDur + adDur > maxDuration && selected.length > 0) break;
+            selected.push(ad);
+            totalDur += adDur;
+            roundIdx++;
+            if (selected.length >= 20) break;
+        }
+        return selected;
+    }
+
+    /**
+     * 通用广告时段播放（前贴片/中贴片/后贴片共用）
+     * @param {string} type - 广告类型
+     * @param {number} slotDuration - 时段时长
+     * @returns {Promise<boolean>}
+     */
+    async playAdSlot(type, slotDuration) {
+        if (this.isAdPlaying) return false;
+        if (slotDuration <= 0) return false;
+        const ads = this.pickAdsForSlot(type, slotDuration);
+        if (ads.length === 0) return false;
+        console.log(`${type}时段: ${slotDuration}秒, 共${ads.length}条广告`);
+        this._inAdSlot = true;
+
+        return new Promise((resolve) => {
+            let currentIndex = 0, elapsed = 0, slotTimer = null, currentAdTimer = null;
+
+            slotTimer = setTimeout(() => { console.log(`${type}时段 ${slotDuration}秒 到达，强制结束`); cleanupAndFinish(); }, slotDuration * 1000);
+
+            const cleanupAndFinish = () => {
+                if (slotTimer) { clearTimeout(slotTimer); slotTimer = null; }
+                if (currentAdTimer) { clearInterval(currentAdTimer); currentAdTimer = null; }
+                if (this.timer) { clearInterval(this.timer); this.timer = null; }
+                this.promoVideo.pause(); this.promoVideo.src = '';
+                this.overlay.style.display = 'none'; this.progressBar.style.display = 'none';
+                this.isAdPlaying = false; this.currentAd = null; this._onAdComplete = null; this._inAdSlot = false;
+                // 恢复主视频
+                var vid = this.player.video;
+                vid.muted = false;
+                vid.play().catch(function() { vid.muted = true; vid.play().catch(function() { setTimeout(function() { vid.play().catch(function(){}); }, 300); }); });
+                resolve(true);
+            };
+
+            const playNext = () => {
+                if (currentIndex >= ads.length) {
+                    if (elapsed < slotDuration) { currentIndex = 0; console.log('广告不足，循环填充'); }
+                    else { cleanupAndFinish(); return; }
+                }
+                const ad = ads[currentIndex]; const adDur = ad.duration || 15;
+                this.promoBadge.textContent = `广告 ${currentIndex + 1}/${ads.length}`;
+                this._onAdComplete = () => {
+                    elapsed += adDur; currentIndex++;
+                    if (currentAdTimer) { clearInterval(currentAdTimer); currentAdTimer = null; }
+                    if (elapsed >= slotDuration) cleanupAndFinish(); else playNext();
+                };
+                this.showAd(ad);
+                const remainTotal = Math.max(0, slotDuration - elapsed);
+                this.countdownWrap.textContent = `剩余${remainTotal}秒`;
+                if (currentAdTimer) clearInterval(currentAdTimer);
+                let localRemain = remainTotal;
+                currentAdTimer = setInterval(() => { localRemain--; if (localRemain <= 0) { clearInterval(currentAdTimer); currentAdTimer = null; } else this.countdownWrap.textContent = `剩余${localRemain}秒`; }, 1000);
+            };
+            playNext();
+        });
+    }
+    
+    async playPreRoll() {
+        return this.playAdSlot('preroll', this.options.prerollDuration || 120);
+    }
+
+    // ========== 中贴片（多条连续播放） ==========
+
+    checkMidRoll(currentTime) {
+        if (this.isAdPlaying || this._inAdSlot) return false;
+        const midrollAds = this.options.ads.filter(ad => ad.type === 'midroll' && ad.enabled);
+        if (midrollAds.length === 0) return false;
+        for (const ad of midrollAds) {
+            const triggerTime = ad.trigger_time || 0;
+            if (triggerTime > 0 && Math.abs(currentTime - triggerTime) < 1.5) {
+                if (!this._triggeredMidrolls) this._triggeredMidrolls = new Set();
+                if (this._triggeredMidrolls.has(ad.id)) continue;
+                this._triggeredMidrolls.add(ad.id);
+                console.log('命中中贴片推广:', ad.name, '触发时间:', triggerTime + 's');
+                // 触发中贴片时段播放
+                this.playAdSlot('midroll', this.options.midrollDuration || 60);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ========== 后贴片（多条连续播放） ==========
+
+    async playPostRoll() {
+        return this.playAdSlot('postroll', this.options.postrollDuration || 60);
+    }
+    
+    // ========== 跑马灯推广 ==========
+    
+    /**
+     * 显示跑马灯文字推广（视频上方1/5处滚动，透明背景）
+     * @param {object} ad - 推广对象
+     * @param {boolean} animate - 是否淡入动画
+     */
+    showMarquee(ad, animate = true) {
+        // 如果没传ad，自动从marquee类型推广中随机选一条
+        if (!ad) {
+            const marqueeAds = this.options.ads.filter(a => a.type === 'marquee' && a.enabled);
+            if (marqueeAds.length === 0) return;
+            ad = marqueeAds[Math.floor(Math.random() * marqueeAds.length)];
+        }
+        if (!ad) return;
+        this.hideMarquee();
+        
+        const container = this.player.container;
+        const textColor = ad.text_color || '#ffffff';
+        
+        // 创建跑马灯容器 — 上方1/5处，背景全透明
+        const marquee = document.createElement('div');
+        marquee.className = 'media-marquee';
+        marquee.style.cssText = `
+            position:absolute;top:20%;left:0;right:0;
+            z-index:150;overflow:hidden;
+            background:transparent;
+            padding:8px 0;cursor:pointer;
+            ${animate ? 'animation:fadeIn 0.3s ease;' : ''}
+        `;
+        
+        // 滚动文字
+        const textEl = document.createElement('div');
+        textEl.style.cssText = `
+            white-space:nowrap;
+            display:inline-block;
+            padding-left:100%;
+            animation:marqueeScroll 12s linear infinite;
+            font-size:15px;color:${textColor};
+            text-shadow:1px 1px 3px rgba(0,0,0,0.7), 0 0 8px rgba(0,0,0,0.4);
+            font-weight:500;
+        `;
+        
+        // 品牌前缀 + 文字，复制一份实现无缝循环
+        let displayText = '';
+        if (ad.brand_name) {
+            displayText += `【${ad.brand_name}】`;
+        }
+        displayText += ad.text_content;
+        textEl.textContent = displayText + '　　　　' + displayText;
+        
+        marquee.appendChild(textEl);
+        
+        // 点击跳转
+        if (ad.click_url) {
+            marquee.onclick = () => {
+                window.open(ad.click_url, '_blank');
+                this.trackEvent('click');
+            };
+        }
+        
+        // 关闭按钮
+        const closeBtn = document.createElement('span');
+        closeBtn.textContent = '✕';
+        closeBtn.style.cssText = `
+            position:absolute;right:8px;top:50%;transform:translateY(-50%);
+            color:rgba(255,255,255,0.5);font-size:11px;cursor:pointer;
+            padding:2px 5px;border-radius:50%;
+            background:rgba(0,0,0,0.25);z-index:1;
+            transition:all 0.2s;
+        `;
+        closeBtn.onmouseover = () => closeBtn.style.color = '#fff';
+        closeBtn.onmouseout = () => closeBtn.style.color = 'rgba(255,255,255,0.5)';
+        closeBtn.onclick = (e) => {
+            e.stopPropagation();
+            this._stopMarqueeRotation();
+            this.hideMarquee();
+        };
+        marquee.appendChild(closeBtn);
+        
+        container.appendChild(marquee);
+        this._activeMarquee = { id: ad.id, element: marquee };
+        
+        // 注入动画样式
+        if (!document.getElementById('marquee-keyframes')) {
+            const style = document.createElement('style');
+            style.id = 'marquee-keyframes';
+            style.textContent = `
+                @keyframes marqueeScroll {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        this.trackEvent('impression');
+    }
+    
+    hideMarquee() {
+        if (this._activeMarquee) {
+            this._activeMarquee.element.remove();
+            this._activeMarquee = null;
+        }
+    }
+    
+    /**
+     * 启动跑马灯循环展示（随机切换不同推广）
+     * @param {number} interval - 间隔秒数（0=持续不停）
+     */
+    startMarqueeRotation(interval) {
+        this._stopMarqueeRotation();
+        
+        const marqueeAds = this.options.ads.filter(ad => ad.type === 'marquee' && ad.enabled && ad.text_content);
+        if (marqueeAds.length === 0) return;
+        
+        // 先随机展示一条
+        const firstAd = marqueeAds[Math.floor(Math.random() * marqueeAds.length)];
+        this.showMarquee(firstAd);
+        
+        // interval > 0 时，定时切换不同推广
+        if (interval > 0 && marqueeAds.length > 1) {
+            this._marqueeTimer = setInterval(() => {
+                // 随机选一条不同于当前的
+                let candidates = marqueeAds;
+                if (this._activeMarquee && marqueeAds.length > 1) {
+                    candidates = marqueeAds.filter(a => a.id !== this._activeMarquee.id);
+                }
+                const nextAd = candidates[Math.floor(Math.random() * candidates.length)];
+                this.showMarquee(nextAd);
+            }, interval * 1000);
+        }
+    }
+    
+    _stopMarqueeRotation() {
+        if (this._marqueeTimer) {
+            clearInterval(this._marqueeTimer);
+            this._marqueeTimer = null;
+        }
+    }
+    
+    /**
+     * 检查并启动跑马灯（页面加载时调用）
+     */
+    checkAndShowMarquee() {
+        const marqueeAds = this.options.ads.filter(ad => ad.type === 'marquee' && ad.enabled && ad.text_content);
+        if (marqueeAds.length === 0) return;
+        
+        // 取所有跑马灯中最大的 triggerTime 作为循环间隔（0=持续不停）
+        const maxInterval = Math.max(...marqueeAds.map(ad => ad.trigger_time || 0));
+        this.startMarqueeRotation(maxInterval);
+    }
+    
+    // ========== 暂停推广（画中画模式） ==========
+    
+    async playPausePromo() {
+        if (this.isAdPlaying || this._inAdSlot) return false;
+        const ad = this.pickRandomAd('pause');
+        if (!ad) return false;
+        await this.showPauseAd(ad);
+        return true;
+    }
+    
+    async showPauseAd(ad) {
+        if (!ad || !ad.id) return;
+        
+        console.log('显示暂停推广:', ad.name);
+        
+        const mediaUrl = ad.media_url;
+        if (!mediaUrl) { console.error('推广没有media_url'); return; }
+        
+        this.isAdPlaying = true;
+        this.currentAd = ad;
+        
+        const container = this.player.container;
+        const duration = ad.duration || 15;
+        
+        // ========== 画中画模式：视频缩小到右下角，推广全屏 ==========
+        
+        // ① 暂停推广全屏层
+        this.pauseOverlay = document.createElement('div');
+        this.pauseOverlay.className = 'pause-overlay';
+        this.pauseOverlay.style.cssText = `
+            position:absolute;top:0;left:0;width:100%;height:100%;
+            background:#000;z-index:300;display:flex;flex-direction:column;
+            animation:fadeIn 0.2s ease;
+        `;
+        container.appendChild(this.pauseOverlay);
+        
+        // ② 推广视频（全屏播放）
+        const promoVideoEl = document.createElement('video');
+        promoVideoEl.src = mediaUrl;
+        promoVideoEl.style.cssText = `
+            width:100%;height:100%;object-fit:contain;background:#000;display:block;
+        `;
+        promoVideoEl.setAttribute('playsinline', '');
+        promoVideoEl.setAttribute('webkit-playsinline', '');
+        promoVideoEl.loop = false;
+        this.pauseOverlay.appendChild(promoVideoEl);
+        
+        // ③ 顶部信息栏
+        const topBar = document.createElement('div');
+        topBar.style.cssText = `
+            position:absolute;top:0;left:0;width:100%;
+            padding:10px 16px;display:flex;justify-content:space-between;align-items:center;
+            background:linear-gradient(180deg,rgba(0,0,0,0.7) 0%,transparent 100%);
+            z-index:210;box-sizing:border-box;
+        `;
+        this.pauseOverlay.appendChild(topBar);
+        
+        // 左侧：推广标签 + 倒计时
+        const topLeft = document.createElement('div');
+        topLeft.style.cssText = 'display:flex;align-items:center;gap:10px;';
+        topBar.appendChild(topLeft);
+        
+        const promoBadge = document.createElement('span');
+        promoBadge.style.cssText = `
+            background:rgba(0,0,0,0.5);color:#fff;
+            padding:3px 10px;border-radius:3px;font-size:12px;letter-spacing:1px;
+        `;
+        promoBadge.textContent = '推广';
+        topLeft.appendChild(promoBadge);
+        
+        const countdownEl = document.createElement('span');
+        countdownEl.style.cssText = `color:rgba(255,255,255,0.85);font-size:13px;`;
+        countdownEl.textContent = `${duration}秒`;
+        topLeft.appendChild(countdownEl);
+        
+        // 右侧：VIP + 跳过
+        const topRight = document.createElement('div');
+        topRight.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        topBar.appendChild(topRight);
+        
+        const vipBtn = document.createElement('button');
+        vipBtn.style.cssText = `
+            background:linear-gradient(135deg,#f5d98e 0%,#c9a24e 100%);
+            color:#1a1a1a;border:none;padding:4px 12px;border-radius:14px;
+            font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;
+        `;
+        vipBtn.textContent = 'VIP跳推广';
+        vipBtn.onclick = () => { if (this.options.onOpenVip) this.options.onOpenVip(); };
+        topRight.appendChild(vipBtn);
+        
+        const skipBtn = document.createElement('button');
+        skipBtn.style.cssText = `
+            background:rgba(0,0,0,0.5);color:#fff;
+            border:1px solid rgba(255,255,255,0.3);
+            width:28px;height:28px;border-radius:50%;
+            font-size:14px;cursor:pointer;display:none;
+            line-height:1;text-align:center;padding:0;
+            transition:background 0.2s;
+        `;
+        skipBtn.textContent = '✕';
+        skipBtn.onmouseover = () => skipBtn.style.background = 'rgba(0,0,0,0.7)';
+        skipBtn.onmouseout = () => skipBtn.style.background = 'rgba(0,0,0,0.5)';
+        skipBtn.onclick = () => this.endPausePromo();
+        
+        // 判断skippable
+        if (ad.skippable !== false && ad.skippable !== 0 && ad.skippable !== '0') {
+            skipBtn.style.display = 'inline-block';
+        }
+        topRight.appendChild(skipBtn);
+        
+        // ④ 画中画小窗（原视频缩小到右下角，自适应容器大小）
+        const containerW = container.offsetWidth || 600;
+        const containerH = container.offsetHeight || 400;
+        const pipW = Math.min(260, Math.max(120, Math.round(containerW * 0.25)));
+        const pipH = Math.round(pipW * 9 / 16);
+        const pipWrap = document.createElement('div');
+        pipWrap.className = 'pause-pip';
+        pipWrap.style.cssText = `
+            position:absolute;bottom:${containerH < 360 ? 40 : 60}px;right:${containerW < 480 ? 8 : 16}px;
+            width:${pipW}px;height:${pipH}px;
+            border-radius:8px;overflow:hidden;
+            background:#000;z-index:220;
+            box-shadow:0 4px 20px rgba(0,0,0,0.5);
+            border:2px solid rgba(255,255,255,0.15);
+            cursor:pointer;transition:all 0.3s ease;
+            display:flex;align-items:center;justify-content:center;
+        `;
+        
+        // 原视频画中画（用当前视频的截图或实时画面）
+        const originalVideo = this.player.video;
+        const pipVideo = document.createElement('video');
+        pipVideo.src = originalVideo.src;
+        pipVideo.currentTime = originalVideo.currentTime;
+        pipVideo.muted = true;
+        pipVideo.style.cssText = `width:100%;height:100%;object-fit:cover;`;
+        pipVideo.setAttribute('playsinline', '');
+        pipWrap.appendChild(pipVideo);
+        
+        // 播放图标
+        const iconSize = pipW < 160 ? 28 : 36;
+        const pipPlayIcon = document.createElement('div');
+        pipPlayIcon.style.cssText = `
+            position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+            width:${iconSize}px;height:${iconSize}px;background:rgba(0,0,0,0.6);
+            border-radius:50%;display:flex;align-items:center;justify-content:center;
+            pointer-events:none;
+        `;
+        pipPlayIcon.innerHTML = `<svg width="${iconSize*0.45|0}" height="${iconSize*0.45|0}" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>`;
+        pipWrap.appendChild(pipPlayIcon);
+        
+        // "回到视频" 标签
+        const pipLabel = document.createElement('div');
+        pipLabel.style.cssText = `
+            position:absolute;bottom:4px;left:50%;transform:translateX(-50%);
+            background:rgba(0,0,0,0.7);color:rgba(255,255,255,0.8);
+            padding:2px 8px;border-radius:4px;font-size:${pipW < 160 ? 9 : 10}px;white-space:nowrap;
+            pointer-events:none;
+        `;
+        pipLabel.textContent = '回到视频';
+        pipWrap.appendChild(pipLabel);
+        
+        // 悬浮放大效果
+        pipWrap.onmouseover = () => {
+            pipWrap.style.transform = 'scale(1.05)';
+            pipWrap.style.boxShadow = '0 8px 30px rgba(0,0,0,0.6)';
+        };
+        pipWrap.onmouseout = () => {
+            pipWrap.style.transform = 'scale(1)';
+            pipWrap.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5)';
+        };
+        
+        // 点击小窗：关闭推广，恢复视频播放
+        pipWrap.onclick = () => {
+            this.endPausePromo();
+            this.player.play();
+        };
+        
+        this.pauseOverlay.appendChild(pipWrap);
+        
+        // ⑤ 底部品牌栏
+        const bottomBar = document.createElement('div');
+        bottomBar.style.cssText = `
+            position:absolute;bottom:0;left:0;width:100%;
+            padding:12px 16px;display:flex;justify-content:space-between;align-items:center;
+            background:linear-gradient(0deg,rgba(0,0,0,0.7) 0%,transparent 100%);
+            z-index:210;box-sizing:border-box;
+        `;
+        this.pauseOverlay.appendChild(bottomBar);
+        
+        // 品牌
+        const brandInfo = document.createElement('div');
+        brandInfo.style.cssText = 'display:flex;align-items:center;gap:10px;flex:1;min-width:0;';
+        bottomBar.appendChild(brandInfo);
+        
+        if (ad.brand_logo) {
+            const logo = document.createElement('img');
+            logo.src = ad.brand_logo;
+            logo.style.cssText = 'width:30px;height:30px;border-radius:6px;object-fit:cover;';
+            brandInfo.appendChild(logo);
+        }
+        
+        const brandNameEl = document.createElement('span');
+        brandNameEl.style.cssText = `
+            color:#fff;font-size:14px;font-weight:500;
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+        `;
+        brandNameEl.textContent = ad.brand_name || ad.name;
+        brandInfo.appendChild(brandNameEl);
+        
+        // CTA按钮
+        if (ad.click_url) {
+            const ctaBtn = document.createElement('a');
+            ctaBtn.href = ad.click_url;
+            ctaBtn.target = '_blank';
+            ctaBtn.style.cssText = `
+                background:linear-gradient(135deg,#00c853 0%,#00a040 100%);
+                color:#fff;padding:6px 18px;border-radius:14px;text-decoration:none;
+                font-size:12px;font-weight:500;white-space:nowrap;
+                box-shadow:0 2px 8px rgba(0,200,83,0.3);transition:all 0.2s;
+            `;
+            ctaBtn.textContent = ad.cta_text || '了解更多';
+            ctaBtn.innerHTML += ' ›';
+            ctaBtn.onclick = () => this.trackEvent('click');
+            bottomBar.appendChild(ctaBtn);
+        }
+        
+        // ⑥ 底部进度条
+        const progressWrap = document.createElement('div');
+        progressWrap.style.cssText = `
+            position:absolute;bottom:48px;left:0;right:0;
+            height:2px;background:rgba(255,255,255,0.1);z-index:210;
+        `;
+        this.pauseOverlay.appendChild(progressWrap);
+        
+        const progressFill = document.createElement('div');
+        progressFill.style.cssText = `
+            height:100%;width:0%;background:#00c853;
+            transition:width ${duration}s linear;
+        `;
+        progressWrap.appendChild(progressFill);
+        
+        // ========== 初始化播放 ==========
+        
+        // 播放推广视频（有声，循环）
+        promoVideoEl.loop = true;
+        promoVideoEl.play().catch(() => {
+            promoVideoEl.muted = true;
+            promoVideoEl.play().catch(() => {});
+        });
+        
+        // 音量控制按钮（取消静音）
+        const volumeBtn = document.createElement('button');
+        volumeBtn.style.cssText = `
+            position:absolute;bottom:60px;left:16px;
+            background:rgba(0,0,0,0.5);color:#fff;
+            border:1px solid rgba(255,255,255,0.3);
+            width:36px;height:36px;border-radius:50%;
+            font-size:16px;cursor:pointer;z-index:220;
+            display:flex;align-items:center;justify-content:center;
+            transition:background 0.2s;
+        `;
+        volumeBtn.textContent = '🔇';
+        volumeBtn.onmouseover = () => volumeBtn.style.background = 'rgba(0,0,0,0.7)';
+        volumeBtn.onmouseout = () => volumeBtn.style.background = 'rgba(0,0,0,0.5)';
+        volumeBtn.onclick = () => {
+            if (promoVideoEl.muted) {
+                promoVideoEl.muted = false;
+                volumeBtn.textContent = '🔊';
+            } else {
+                promoVideoEl.muted = true;
+                volumeBtn.textContent = '🔇';
+            }
+        };
+        this.pauseOverlay.appendChild(volumeBtn);
+        
+        // 启动进度条
+        setTimeout(() => progressFill.style.width = '100%', 100);
+        
+        // 倒计时（仅显示用，不自动结束，推广循环播放直到用户关闭或播放视频）
+        let remaining = duration;
+        this.timer = setInterval(() => {
+            remaining--;
+            if (remaining <= 0) {
+                remaining = duration; // 重置倒计时（推广循环）
+            }
+            countdownEl.textContent = `${remaining}秒`;
+        }, 1000);
+        
+        // 保存引用
+        this._pauseAdVideo = promoVideoEl;
+        this._pausePipVideo = pipVideo;
+        this._pauseSkipTimer = pauseSkipTimer;
+        
+        this.trackEvent('impression');
+    }
+    
+    endPausePromo() {
+        if (!this.isAdPlaying) return;
+        
+        console.log('暂停推广结束');
+        
+        if (this.timer) { clearInterval(this.timer); this.timer = null; }
+        if (this._pauseAdVideo) { this._pauseAdVideo.pause(); this._pauseAdVideo.src = ''; }
+        if (this._pausePipVideo) { this._pausePipVideo.pause(); this._pausePipVideo.src = ''; }
+        if (this.pauseOverlay) { this.pauseOverlay.remove(); this.pauseOverlay = null; }
+        
+        this.isAdPlaying = false;
+        this.currentAd = null;
+    }
+    
+    // ========== 前贴片/后贴片（全屏覆盖式） ==========
+    
+    async showAd(ad) {
+        if (!ad || !ad.id) return;
+        
+        console.log('显示推广:', ad.name, ad.type);
+        
+        const mediaUrl = ad.media_url;
+        if (!mediaUrl) { console.error('推广没有media_url'); return; }
+        
+        this.isAdPlaying = true;
+        this.currentAd = ad;
+        
+        // 暂停主视频
+        this.player.pause();
+        
+        // 显示推广遮罩
+        this.overlay.style.display = 'block';
+        
+        // 设置推广视频
+        this.promoVideo.src = mediaUrl;
+        this.promoVideo.load();
+        
+        // 更新信息
+        this.promoBadge.textContent = '推广';
+        const duration = ad.duration || 5;
+        this.countdownWrap.textContent = `${duration}秒`;
+        
+        // 品牌信息
+        if (ad.brand_name) {
+            this.brandName.textContent = ad.brand_name;
+            this.brandName.style.display = 'block';
+            if (ad.brand_logo) {
+                this.brandLogo.src = ad.brand_logo;
+                this.brandLogo.style.display = 'block';
+            } else {
+                this.brandLogo.style.display = 'none';
+            }
+        } else {
+            this.brandName.style.display = 'none';
+            this.brandLogo.style.display = 'none';
+        }
+        
+        // CTA
+        if (ad.click_url) {
+            this.ctaBtn.href = ad.click_url;
+            this.ctaBtn.innerHTML = `${ad.cta_text || '了解更多'} <span style="font-size:11px">›</span>`;
+            this.ctaBtn.style.display = 'flex';
+        } else {
+            this.ctaBtn.style.display = 'none';
+        }
+        
+        // 跳过按钮
+        this.skipBtn.style.display = 'none';
+        if (ad.skippable !== false && ad.skippable !== 0 && ad.skippable !== '0') {
+            setTimeout(() => {
+                if (this.isAdPlaying) this.skipBtn.style.display = 'inline-block';
+            }, 5000);
+        }
+        
+        // 进度条
+        this.progressBar.style.display = 'block';
+        this.progressFill.style.width = '0%';
+        this.progressFill.style.transition = `width ${duration}s linear`;
+        setTimeout(() => this.progressFill.style.width = '100%', 100);
+        
+        // 播放推广视频
+        const playPromise = this.promoVideo.play();
+        if (playPromise) {
+            playPromise.catch(() => {
+                this.promoVideo.muted = true;
+                this.promoVideo.play().catch(() => this.endAd());
+            });
+        }
+        
+        // 音量控制按钮（取消静音）
+        if (!this.volumeBtn) {
+            this.volumeBtn = document.createElement('button');
+            this.volumeBtn.style.cssText = `
+                position:absolute;bottom:60px;left:16px;
+                background:rgba(0,0,0,0.5);color:#fff;
+                border:1px solid rgba(255,255,255,0.3);
+                width:36px;height:36px;border-radius:50%;
+                font-size:16px;cursor:pointer;z-index:202;
+                display:flex;align-items:center;justify-content:center;
+                transition:background 0.2s;
+            `;
+            this.overlay.appendChild(this.volumeBtn);
+        }
+        this.volumeBtn.textContent = '🔇';
+        this.volumeBtn.onclick = () => {
+            if (this.promoVideo.muted) {
+                this.promoVideo.muted = false;
+                this.volumeBtn.textContent = '🔊';
+            } else {
+                this.promoVideo.muted = true;
+                this.volumeBtn.textContent = '🔇';
+            }
+        };
+        this.volumeBtn.style.display = 'flex';
+        
+        // 倒计时
+        let remaining = duration;
+        this.timer = setInterval(() => {
+            remaining--;
+            this.countdownWrap.textContent = `${remaining}秒`;
+            if (remaining <= 0) this.endAd();
+        }, 1000);
+        
+        this.trackEvent('impression');
+    }
+    
+    // 结束推广
+    endAd() {
+        if (!this.isAdPlaying) return;
+        console.log('推广结束');
+        if (this.timer) { clearInterval(this.timer); this.timer = null; }
+        // 如果有回调（前贴片多条连续），调用回调而不关闭遮罩
+        if (this._onAdComplete) { const cb = this._onAdComplete; this._onAdComplete = null; cb(); return; }
+        this.promoVideo.pause(); this.promoVideo.src = '';
+        this.overlay.style.display = 'none'; this.progressBar.style.display = 'none';
+        this.isAdPlaying = false; this.currentAd = null;
+        // 恢复主视频播放
+        this.player.play();
+    }
+    
+    // 统计事件
+    trackEvent(event) {
+        if (!this.currentAd) return;
+        fetch('/api/campaigns/track', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                promoId: this.currentAd.id,
+                event: event,
+                timestamp: Date.now()
+            })
+        }).catch(() => {});
+    }
+    
+    // 销毁
+    destroy() {
+        if (this.timer) clearInterval(this.timer);
+        this._stopMarqueeRotation();
+        this.hideMarquee();
+        if (this._pauseAdVideo) this._pauseAdVideo.pause();
+        if (this._pausePipVideo) this._pausePipVideo.pause();
+        if (this.pauseOverlay) this.pauseOverlay.remove();
+        if (this.overlay) this.overlay.remove();
+        this.isAdPlaying = false;
+        this.currentAd = null;
+        this._triggeredMidrolls = new Set();
+    }
+    // ========== 兼容别名（前端调用用小写，定义用驼峰） ==========
+    
+    async playPreroll() { return this.playPreRoll(); }
+    checkMidroll(t) { return this.checkMidRoll(t); }
+    async playPostroll() { return this.playPostRoll(); }
+    clearPausePromo() { return this.endPausePromo(); }
+    
+    // ========== 开屏推广 ==========
+    
+    async playSplash() {
+        const ad = this.pickRandomAd('splash');
+        if (!ad) return false;
+        await this.showAd(ad);
+        // 等开屏播完再返回
+        await new Promise(resolve => {
+            const check = setInterval(() => {
+                if (!this.isAdPlaying) { clearInterval(check); resolve(); }
+            }, 200);
+        });
+        return true;
+    }
+    
+    // ========== 角标推广（支持多位置随机展示） ==========
+    
+    /**
+     * 启动角标推广随机展示
+     * 播放视频时随机时间展示，多位置随机抽取
+     */
+    startOverlayRotation() {
+        const overlayAds = this.options.ads.filter(ad => ad.type === 'overlay' && ad.enabled);
+        if (overlayAds.length === 0) return;
+        
+        // 随机时间触发（10-60秒之间）
+        const randomDelay = () => Math.floor(Math.random() * 50000) + 10000;
+        
+        const showRandomOverlay = () => {
+            if (this.isAdPlaying) return;
+            
+            // 随机抽取一条角标推广
+            const ad = overlayAds[Math.floor(Math.random() * overlayAds.length)];
+            this.showOverlay(ad);
+            
+            // 设置下一次随机时间
+            this._overlayTimer = setTimeout(showRandomOverlay, randomDelay());
+        };
+        
+        // 首次展示
+        this._overlayTimer = setTimeout(showRandomOverlay, randomDelay());
+    }
+    
+    /**
+     * 显示角标推广
+     * @param {object} ad - 推广对象
+     */
+    showOverlay(ad) {
+        if (!ad || !ad.media_url) return;
+        
+        this.hideOverlay();
+        
+        const container = this.player.container;
+        const el = document.createElement('div');
+        
+        // 根据position设置位置
+        const position = ad.position || 'bottom-right';
+        let positionCSS = '';
+        switch (position) {
+            case 'top-left':
+                positionCSS = 'top:12px;left:12px;';
+                break;
+            case 'top-right':
+                positionCSS = 'top:12px;right:12px;';
+                break;
+            case 'bottom-left':
+                positionCSS = 'bottom:70px;left:12px;';
+                break;
+            case 'bottom-right':
+            default:
+                positionCSS = 'bottom:70px;right:12px;';
+                break;
+        }
+        
+        el.style.cssText = `position:absolute;${positionCSS}z-index:150;cursor:pointer;animation:fadeIn 0.3s ease;`;
+        
+        // 角标素材（自动识别图片/视频，自适应容器大小）
+        const containerW = container.offsetWidth || 600;
+        const containerH = container.offsetHeight || 400;
+        const maxW = Math.min(ad.width || 320, Math.max(80, Math.round(containerW * 0.35)));
+        const maxH = Math.min(ad.height || 180, Math.max(50, Math.round(containerH * 0.30)));
+        const url = ad.media_url || '';
+        const isVideo = ad.media_type === 'video' || /\.(mp4|m3u8|flv|webm)(\?|$)/i.test(url);
+
+        if (isVideo) {
+            const video = document.createElement('video');
+            video.src = url;
+            video.style.cssText = `max-width:${maxW}px;max-height:${maxH}px;border-radius:6px;object-fit:cover;opacity:0.9;width:100%;height:auto;`;
+            video.setAttribute('playsinline', '');
+            video.setAttribute('webkit-playsinline', '');
+            video.muted = true;
+            video.loop = true;
+            video.autoplay = true;
+            video.play().catch(() => {});
+            el.appendChild(video);
+        } else {
+            const img = document.createElement('img');
+            img.src = url;
+            img.style.cssText = `max-width:${maxW}px;max-height:${maxH}px;border-radius:6px;object-fit:cover;opacity:0.9;width:100%;height:auto;`;
+            el.appendChild(img);
+        }
+        
+        // 关闭按钮（5秒后显示）
+        const closeBtn = document.createElement('div');
+        closeBtn.textContent = '✕';
+        closeBtn.style.cssText = `
+            position:absolute;top:-8px;right:-8px;
+            background:rgba(0,0,0,0.7);color:#fff;
+            width:20px;height:20px;border-radius:50%;
+            font-size:12px;display:none;cursor:pointer;
+            align-items:center;justify-content:center;
+            transition:background 0.2s;
+        `;
+        closeBtn.onmouseover = () => closeBtn.style.background = 'rgba(255,0,0,0.8)';
+        closeBtn.onmouseout = () => closeBtn.style.background = 'rgba(0,0,0,0.7)';
+        closeBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.hideOverlay();
+        };
+        el.appendChild(closeBtn);
+        
+        // 点击跳转
+        if (ad.click_url) {
+            el.onclick = () => {
+                window.open(ad.click_url, '_blank');
+                this.trackEvent('click');
+            };
+        }
+        
+        container.appendChild(el);
+        this._activeOverlay = el;
+        this._activeOverlayCloseBtn = closeBtn;
+        
+        // 5秒后显示关闭按钮
+        setTimeout(() => {
+            if (this._activeOverlayCloseBtn) {
+                this._activeOverlayCloseBtn.style.display = 'flex';
+            }
+        }, 5000);
+        
+        // 15秒后自动隐藏
+        this._overlayAutoHideTimer = setTimeout(() => {
+            this.hideOverlay();
+        }, 15000);
+        
+        this.trackEvent('impression');
+    }
+    
+    /**
+     * 隐藏角标推广
+     */
+    hideOverlay() {
+        if (this._activeOverlay) {
+            this._activeOverlay.remove();
+            this._activeOverlay = null;
+            this._activeOverlayCloseBtn = null;
+        }
+        if (this._overlayAutoHideTimer) {
+            clearTimeout(this._overlayAutoHideTimer);
+            this._overlayAutoHideTimer = null;
+        }
+    }
+    
+    /**
+     * 停止角标推广轮播
+     */
+    stopOverlayRotation() {
+        if (this._overlayTimer) {
+            clearTimeout(this._overlayTimer);
+            this._overlayTimer = null;
+        }
+        this.hideOverlay();
+    }
+    
+    // ========== 扫码贴片 ==========
+    
+    showQrcode() {
+        const ad = this.pickRandomAd('qrcode');
+        if (!ad || !ad.qrcode_url) return;
+        this.hideQrcode();
+        const container = this.player.container;
+        const el = document.createElement('div');
+        el.style.cssText = 'position:absolute;bottom:70px;left:12px;z-index:150;background:rgba(0,0,0,0.85);border-radius:10px;padding:12px;text-align:center;';
+        const img = document.createElement('img');
+        img.src = ad.qrcode_url;
+        img.style.cssText = 'width:100px;height:100px;border-radius:6px;';
+        el.appendChild(img);
+        if (ad.brand_name) {
+            const label = document.createElement('div');
+            label.style.cssText = 'color:#fff;font-size:11px;margin-top:6px;';
+            label.textContent = ad.brand_name;
+            el.appendChild(label);
+        }
+        container.appendChild(el);
+        this._activeQrcode = el;
+    }
+    hideQrcode() { if (this._activeQrcode) { this._activeQrcode.remove(); this._activeQrcode = null; } }
+    
+    // ========== 横幅推广 ==========
+    
+    showBanner() {
+        const ad = this.pickRandomAd('banner');
+        if (!ad) return;
+        this.hideBanner();
+        const container = this.player.container;
+        const el = document.createElement('div');
+        el.style.cssText = 'position:absolute;top:0;left:0;right:0;z-index:150;background:linear-gradient(180deg,rgba(0,0,0,0.8),transparent);padding:8px 16px;display:flex;align-items:center;';
+        const text = document.createElement('span');
+        text.style.cssText = 'color:#fff;font-size:13px;flex:1;';
+        text.textContent = (ad.brand_name ? '【' + ad.brand_name + '】' : '') + (ad.text_content || ad.name);
+        el.appendChild(text);
+        if (ad.click_url) {
+            const btn = document.createElement('a');
+            btn.href = ad.click_url; btn.target = '_blank';
+            btn.style.cssText = 'background:#00c853;color:#fff;padding:4px 14px;border-radius:12px;text-decoration:none;font-size:12px;';
+            btn.textContent = ad.cta_text || '了解更多';
+            el.appendChild(btn);
+        }
+        container.appendChild(el);
+        this._activeBanner = el;
+    }
+    hideBanner() { if (this._activeBanner) { this._activeBanner.remove(); this._activeBanner = null; } }
+    
+    // ========== 统一追踪 ==========
+    
+    _trackEvent(ad, event) {
+        if (!ad) return;
+        const ep = event === 'click' ? 'click' : event === 'skip' ? 'skip' : 'impression';
+        fetch('/api/campaigns/' + ad.id + '/' + ep, { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(() => {});
+    }
+
+}
+window.MediaManager = MediaManager;
+
+  var BASE=C.base||location.origin;
+  async function api(p){var r=await fetch(BASE+p);return r.json()}
+
+  // 获取容器
+  var box=document.querySelector(C.container);
+  if(!box){console.error("[Player] 容器不存在:",C.container);return}
+
+  // 加载视频
+  var video;
+  if(C.url){
+    video={url:C.url,type:C.type||dt(C.url),cover:C.cover||"",title:"Player"};
+  }else if(C.v){
+    video=await api("/api/videos/"+C.v);
+  }else{
+    var vs=await api("/api/videos");video=vs[0];
+  }
+  if(!video||video.error){box.innerHTML="<p style=\"color:#666;text-align:center;padding:40px\">视频不存在</p>";return}
+
+  var vc={url:video.url,type:video.type||"mp4",pic:video.cover||""};
+
+  if(video.type==="m3u8"&&typeof Hls!=="undefined"&&Hls.isSupported()){
+    vc.type="customHls";vc.customType={customHls:function(v){var h=new Hls();h.loadSource(v.src);h.attachMedia(v);h.on(Hls.Events.MANIFEST_PARSED,function(){v.play()});h.on(Hls.Events.ERROR,function(_,d){if(d.fatal)h.destroy()})}};
+  }else if(video.type==="flv"&&typeof flvjs!=="undefined"&&flvjs.isSupported()){
+    vc.type="customFlv";vc.customType={customFlv:function(v){var f=flvjs.createPlayer({type:"flv",url:v.src});f.attachMediaElement(v);f.load();f.play()}};
+  }
+
+  var dp=new DPlayer({
+    container:box,
+    autoplay:C.autoplay,
+    theme:C.theme,
+    lang:"zh-cn",
+    screenshot:true,
+    hotkey:true,
+    preload:"auto",
+    volume:.7,
+    mutex:true,
+    video:vc
+  });
+
+  var mm=new MediaManager(dp);
+  await mm.loadCampaigns();
+  await mm.playSplash();
+  await mm.playPreroll();
+  dp.on("timeupdate",function(){if(!dp.video.paused)mm.checkMidroll(dp.video.currentTime)});
+  dp.on("pause",function(){if(!mm.skipNextPausePromo&&!mm._inAdSlot)mm.playPausePromo()});
+  dp.on("play",function(){mm.clearPausePromo()});
+  dp.on("ended",async function(){mm._inAdSlot=true;var played=await mm.playPostroll();if(!played)mm._inAdSlot=false});
+  mm.showMarquee();
+  mm.startOverlayRotation();
+
+  // 水印
+  if(C.logo||C.logoText){
+    var wm=document.createElement("div");
+    wm.className="ep-wm "+C.logoPos;
+    if(C.logo){wm.innerHTML="<img src=\""+C.logo+"\">";}
+    else{wm.innerHTML="<span>"+C.logoText+"</span>";}
+    box.appendChild(wm);
+  }
+  console.log("[Player] OK");
+}
+
+if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init)}else{init()}
+})();

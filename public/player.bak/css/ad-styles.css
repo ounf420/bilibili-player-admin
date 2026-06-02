@@ -1,0 +1,469 @@
+/* ==================== 广告系统样式 ==================== */
+
+/* 广告容器基础 */
+.dplayer-ad-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.9);
+}
+
+/* 前贴片/中贴片/后贴片 */
+.dplayer-ad-preroll,
+.dplayer-ad-midroll,
+.dplayer-ad-postroll {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.dplayer-ad-video {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    cursor: pointer;
+}
+
+.dplayer-ad-video video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.dplayer-ad-info {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 101;
+}
+
+.dplayer-ad-badge {
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.dplayer-ad-countdown {
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.dplayer-ad-skip {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    padding: 8px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+    display: none;
+}
+
+.dplayer-ad-skip:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.dplayer-ad-brand {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 101;
+}
+
+.dplayer-ad-brand-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.dplayer-ad-brand-name {
+    color: #fff;
+    font-size: 14px;
+}
+
+.dplayer-ad-cta {
+    background: #00a1d6;
+    color: #fff;
+    padding: 8px 20px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+.dplayer-ad-cta:hover {
+    background: #0088bb;
+}
+
+/* ==================== 暂停广告 ==================== */
+
+/* 全屏暂停广告 */
+.dplayer-ad-pause-full {
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.dplayer-ad-pause-full .dplayer-ad-pause-content {
+    width: 80%;
+    max-width: 800px;
+    position: relative;
+}
+
+.dplayer-ad-pause-full .dplayer-ad-pause-content video,
+.dplayer-ad-pause-full .dplayer-ad-pause-content img {
+    width: 100%;
+    border-radius: 8px;
+}
+
+/* 迷你暂停浮窗 */
+.dplayer-ad-pause-mini {
+    background: transparent;
+    pointer-events: none;
+}
+
+.dplayer-ad-pause-mini .dplayer-ad-pause-content {
+    position: absolute;
+    bottom: 80px;
+    right: 20px;
+    width: 300px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 8px;
+    overflow: hidden;
+    pointer-events: auto;
+}
+
+.dplayer-ad-pause-mini .dplayer-ad-pause-content video,
+.dplayer-ad-pause-mini .dplayer-ad-pause-content img {
+    width: 100%;
+    height: 170px;
+    object-fit: cover;
+}
+
+.dplayer-ad-pause-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 102;
+}
+
+.dplayer-ad-pause-brand {
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dplayer-ad-pause-brand span {
+    color: #fff;
+    font-size: 14px;
+}
+
+.dplayer-ad-pause-brand a {
+    color: #00a1d6;
+    text-decoration: none;
+    font-size: 13px;
+}
+
+/* ==================== 悬浮广告 ==================== */
+
+.dplayer-ad-overlay-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 50;
+}
+
+.dplayer-ad-overlay {
+    pointer-events: auto;
+}
+
+/* AI创可贴广告 */
+.dplayer-ad-overlay-overlay {
+    position: absolute;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    max-width: 600px;
+}
+
+.dplayer-ad-sticker {
+    position: relative;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.dplayer-ad-sticker a {
+    display: block;
+}
+
+.dplayer-ad-sticker img {
+    width: 100%;
+    height: 60px;
+    object-fit: cover;
+}
+
+.dplayer-ad-sticker-close {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+/* 视频角标广告 */
+.dplayer-ad-overlay-corner {
+    position: absolute;
+    bottom: 80px;
+    right: 20px;
+}
+
+.dplayer-ad-corner {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    opacity: 0.8;
+    transition: opacity 0.3s;
+}
+
+.dplayer-ad-corner:hover {
+    opacity: 1;
+}
+
+.dplayer-ad-corner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 跑马灯字幕广告 */
+.dplayer-ad-overlay-marquee {
+    position: absolute;
+    bottom: 60px;
+    left: 0;
+    width: 100%;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.dplayer-ad-marquee {
+    white-space: nowrap;
+    animation: marquee 20s linear infinite;
+}
+
+.dplayer-ad-marquee span {
+    color: #ff6b00;
+    font-size: 14px;
+    padding: 8px 0;
+    display: inline-block;
+}
+
+@keyframes marquee {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+}
+
+/* ==================== 互动广告 ==================== */
+
+.dplayer-ad-interactive {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+}
+
+/* 摇一摇广告 */
+.dplayer-ad-shake {
+    text-align: center;
+    color: #fff;
+}
+
+.dplayer-ad-shake-icon {
+    font-size: 64px;
+    animation: shake 0.5s ease-in-out infinite;
+}
+
+.dplayer-ad-shake-text {
+    font-size: 24px;
+    margin: 20px 0;
+    font-weight: bold;
+}
+
+.dplayer-ad-shake-desc {
+    font-size: 16px;
+    opacity: 0.8;
+}
+
+@keyframes shake {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-15deg); }
+    75% { transform: rotate(15deg); }
+}
+
+/* 扫码广告 */
+.dplayer-ad-qrcode {
+    text-align: center;
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    position: relative;
+}
+
+.dplayer-ad-qrcode img {
+    width: 200px;
+    height: 200px;
+}
+
+.dplayer-ad-qrcode-text {
+    margin-top: 16px;
+    font-size: 16px;
+    color: #333;
+}
+
+.dplayer-ad-qrcode-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+}
+
+/* 互动贴片广告 */
+.dplayer-ad-interactive-game {
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    max-width: 400px;
+}
+
+.dplayer-ad-game-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 12px;
+}
+
+.dplayer-ad-game-desc {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.dplayer-ad-game-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dplayer-ad-game-option {
+    background: #00a1d6;
+    color: #fff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.dplayer-ad-game-option:hover {
+    background: #0088bb;
+}
+
+.dplayer-ad-game-result {
+    margin-top: 20px;
+    padding: 16px;
+    background: #f0f8ff;
+    border-radius: 8px;
+    font-size: 16px;
+    color: #333;
+}
+
+/* ==================== 广告控制栏 ==================== */
+
+.dplayer-ad-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    padding: 20px;
+    z-index: 101;
+}
+
+/* ==================== 响应式 ==================== */
+
+@media (max-width: 768px) {
+    .dplayer-ad-pause-mini .dplayer-ad-pause-content {
+        width: 200px;
+        bottom: 60px;
+        right: 10px;
+    }
+    
+    .dplayer-ad-overlay-overlay {
+        width: 90%;
+        bottom: 40px;
+    }
+    
+    .dplayer-ad-overlay-corner {
+        bottom: 60px;
+        right: 10px;
+    }
+    
+    .dplayer-ad-corner {
+        width: 60px;
+        height: 60px;
+    }
+}

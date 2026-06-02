@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频播放器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+        #player { width: 100%; height: 100%; }
+        .ep-logo { position: fixed; z-index: 100; pointer-events: none; }
+        .ep-logo.tl { top: 12px; left: 12px; }
+        .ep-logo.tr { top: 12px; right: 12px; }
+        .ep-logo.bl { bottom: 60px; left: 12px; }
+        .ep-logo.br { bottom: 60px; right: 12px; }
+        .ep-logo img { max-width: 100px; max-height: 32px; opacity: 0.7; }
+        .ep-logo span { color: rgba(255,255,255,0.5); font-size: 12px; text-shadow: 0 1px 3px rgba(0,0,0,0.5); user-select: none; }
+    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dplayer@1.27.1/dist/DPlayer.min.css">
+</head>
+<body>
+    <div id="player"></div>
+    <div class="ep-logo" id="logoEl" style="display:none;"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/dplayer@1.27.1/dist/DPlayer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flv.js@1.6.2/dist/flv.min.js"></script>
+    <script src="/js/media-engine.js"></script>
+    <script>
+        const P = new URLSearchParams(location.search);
+        const videoId = P.get('v') || '';
+        const videoUrl = P.get('url') || '';
+        const videoType = P.get('type') || '';
+        const videoCover = P.get('cover') || '';
+        const autoplay = P.get('autoplay') !== 'false';
+        const theme = P.get('theme') || '#e6a817';
+        const logo = P.get('logo') || '';
+        const logoText = P.get('logo-text') || '';
+        const logoPos = P.get('logo-pos') || 'tr';
+
+        function detectType(url) {
+            if (/\.m3u8(\?|$)/i.test(url)) return 'm3u8';
+            if (/\.flv(\?|$)/i.test(url)) return 'flv';
+            return 'mp4';
+        }
+
+        async function api(path) {
+            const res = await fetch(path);
+            return res.json();
+        }
+
+        async function init() {
+            let video;
+
+            if (videoUrl) {
+                // 直接传URL
+                video = { url: videoUrl, type: videoType || detectType(videoUrl), cover: videoCover };
+            } else if (videoId) {
+                // 系统视频ID
+                video = await api('/api/videos/' + videoId);
+            } else {
+                // 默认第一个
+                const videos = await api('/api/videos');
+                video = videos[0];
+            }
+
+            if (!video || video.error) {
+                document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#666;font-size:14px;">视频不存在</div>';
+                return;
+            }
+
+            // 设置
+            let settings = {};
+            try { settings = await api('/api/settings'); } catch(e) {}
+
+            // 视频配置
+            const vc = { url: video.url, type: video.type || 'mp4', pic: video.cover || '' };
+
+            if (video.type === 'm3u8' && typeof Hls !== 'undefined' && Hls.isSupported()) {
+                vc.type = 'customHls';
+                vc.customType = {
+                    customHls: function(vEl) {
+                        const hls = new Hls();
+                        hls.loadSource(vEl.src);
+                        hls.attachMedia(vEl);
+                        hls.on(Hls.Events.MANIFEST_PARSED, () => vEl.play());
+                        hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) hls.destroy(); });
+                    }
+                };
+            } else if (video.type === 'flv' && typeof flvjs !== 'undefined' && flvjs.isSupported()) {
+                vc.type = 'customFlv';
+                vc.customType = {
+                    customFlv: function(vEl) {
+                        const flv = flvjs.createPlayer({ type: 'flv', url: vEl.src });
+                        flv.attachMediaElement(vEl);
+                        flv.load();
+                        flv.play();
+                    }
+                };
+            }
+
+            const dp = new DPlayer({
+                container: document.getElementById('player'),
+                autoplay: autoplay,
+                theme: theme,
+                lang: 'zh-cn',
+                screenshot: true,
+                hotkey: true,
+                preload: 'auto',
+                volume: 0.7,
+                mutex: true,
+                video: vc
+            });
+
+            // 广告系统
+            const mm = new MediaManager(dp);
+            await mm.loadCampaigns();
+            await mm.playSplash();
+            await mm.playPreroll();
+
+            dp.on('timeupdate', () => { if (!dp.video.paused) mm.checkMidroll(dp.video.currentTime); });
+            dp.on('pause', () => { if (!mm.skipNextPausePromo) mm.playPausePromo(); });
+            dp.on('play', () => { mm.clearPausePromo(); });
+            dp.on('ended', () => { mm.playPostroll(); });
+
+            mm.showMarquee();
+            mm.startOverlayRotation();
+
+            // 水印
+            if (logo || logoText) {
+                const el = document.getElementById('logoEl');
+                el.className = 'ep-logo ' + logoPos;
+                el.style.display = 'block';
+                if (logo) {
+                    el.innerHTML = '<img src="' + logo + '" alt="Logo">';
+                } else {
+                    el.innerHTML = '<span>' + logoText + '</span>';
+                }
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="screen-orientation" content="landscape">
+    <meta name="x5-orientation" content="landscape">
+    <meta name="x5-fullscreen" content="true">
+    <meta name="full-screen" content="yes">
+    <title>视频播放器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+        
+        /* 播放器容器 */
+        .player-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background: #000;
+        }
+        
+        /* 自定义背景 */
+        .player-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        
+        .player-bg-content {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0c0c1d 0%, #1a1a3e 50%, #0c0c1d 100%);
+        }
+        
+        /* DPlayer 容器 */
+        #dplayer {
+            flex: 1;
+            width: 100%;
+            z-index: 1;
+        }
+        
+        /* DPlayer 样式覆盖 */
+        .dplayer {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        
+        .dplayer-video-wrap {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .dplayer-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        /* 控制栏样式 */
+        .dplayer-controller {
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.9)) !important;
+            padding: 10px 15px !important;
+        }
+        
+        .dplayer-controller-mask {
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.9)) !important;
+        }
+        
+        /* 进度条 */
+        .dplayer-bar-wrap {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        
+        .dplayer-bar {
+            height: 3px !important;
+            transition: height 0.2s !important;
+        }
+        
+        .dplayer-bar-wrap:hover .dplayer-bar {
+            height: 6px !important;
+        }
+        
+        .dplayer-played {
+            background: #00a1d6 !important;
+        }
+        
+        .dplayer-thumb {
+            background: #00a1d6 !important;
+        }
+        
+        /* 控制按钮 */
+        .dplayer-icon {
+            color: #fff !important;
+        }
+        
+        .dplayer-icon:hover {
+            color: #00a1d6 !important;
+        }
+        
+        /* 时间显示 */
+        .dplayer-time {
+            color: #fff !important;
+            font-size: 12px !important;
+        }
+
+        /* 上一集/下一集按钮 */
+        .dplayer-icons-left .dplayer-prev-btn,
+        .dplayer-icons-left .dplayer-next-btn,
+        .dplayer-icons-left .dplayer-pause-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            color: #fff;
+            transition: all 0.2s;
+            border-radius: 4px;
+        }
+        .dplayer-icons-left .dplayer-prev-btn:hover,
+        .dplayer-icons-left .dplayer-next-btn:hover,
+        .dplayer-icons-left .dplayer-pause-btn:hover {
+            color: #00a1d6;
+            background: rgba(255,255,255,0.1);
+        }
+        .dplayer-icons-left .dplayer-prev-btn svg,
+        .dplayer-icons-left .dplayer-next-btn svg,
+        .dplayer-icons-left .dplayer-pause-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+        
+        /* 播放暂停按钮稍大一些 */
+        .dplayer-icons-left .dplayer-pause-btn {
+            width: 40px;
+            height: 40px;
+        }
+        .dplayer-icons-left .dplayer-pause-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* 隐藏DPlayer默认中间播放按钮（用双击替代） */
+        .dplayer-bezel,
+        .dplayer-bezel .dplayer-bezel-icon,
+        .dplayer-bezel .dplayer-bezel-transition {
+            display: none !important;
+            opacity: 0 !important;
+            animation: none !important;
+        }
+        
+        /* 隐藏移动端中央播放按钮 */
+        .dplayer-mobile-play {
+            display: none !important;
+        }
+        
+        /* 隐藏暂停时的遮罩 */
+        .dplayer-mask {
+            display: none !important;
+        }
+        
+        /* 控制栏自动隐藏 */
+        .dplayer-controller {
+            opacity: 1;
+            transition: opacity 0.5s ease !important;
+        }
+        .dplayer-controller.hide {
+            opacity: 0 !important;
+            pointer-events: none;
+        }
+        
+        /* 欢迎提示 */
+        .welcome-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #fff;
+            z-index: 5;
+        }
+        
+        .welcome-hint .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        .welcome-hint .title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .welcome-hint .desc {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        /* ========== 旋转按钮 ========== */
+        .dplayer-rotate-btn {
+            cursor: pointer;
+            padding: 5px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.9;
+            transition: opacity 0.2s;
+        }
+        .dplayer-rotate-btn:hover {
+            opacity: 1;
+        }
+        .dplayer-rotate-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: #fff;
+        }
+
+        /* ========== 移动端全屏样式 ========== */
+        .player-container.mobile-fullscreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 99999 !important;
+            background: #000 !important;
+        }
+
+        .player-container.mobile-landscape {
+            width: 100vh !important;
+            height: 100vw !important;
+            transform: rotate(90deg);
+            transform-origin: 0 0;
+            position: fixed !important;
+            top: 0 !important;
+            left: 100vw !important;
+            z-index: 99999 !important;
+        }
+
+        /* 横屏时隐藏系统UI */
+        .player-container.mobile-landscape ~ * {
+            display: none !important;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .welcome-hint .icon {
+                font-size: 48px;
+            }
+            
+            .welcome-hint .title {
+                font-size: 18px;
+            }
+
+            /* 移动端控制栏按钮更易点击 */
+            .dplayer-icons-right .dplayer-icon,
+            .dplayer-icons-left .dplayer-icon {
+                padding: 8px !important;
+            }
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            z-index: 9999;
+            transition: transform 0.3s;
+            color: #fff;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .toast-info { background: #00a1d6; }
+        .toast-error { background: #ff4d4f; }
+        
+        /* ========== 爱奇艺风格会员弹窗 ========== */
+        .vip-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .vip-modal-overlay.show {
+            display: flex;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes scaleIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        .vip-modal {
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 680px;
+            overflow: hidden;
+            animation: slideUp 0.3s ease;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+        
+        /* 弹窗头部 */
+        .vip-modal-header {
+            background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+            padding: 24px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .vip-modal-header h2 {
+            color: #1a1a2e;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .vip-modal-header p {
+            color: rgba(26, 26, 46, 0.8);
+            font-size: 14px;
+        }
+        
+        .vip-modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: none;
+            color: #1a1a2e;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        
+        .vip-modal-close:hover {
+            background: rgba(0, 0, 0, 0.4);
+        }
+        
+        /* 会员卡片区域 */
+        .vip-cards {
+            padding: 24px;
+            display: flex;
+            gap: 16px;
+        }
+        
+        .vip-card {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 24px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .vip-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 215, 0, 0.5);
+            background: rgba(255, 215, 0, 0.1);
+        }
+        
+        .vip-card.selected {
+            border-color: #ffd700;
+            background: rgba(255, 215, 0, 0.15);
+        }
+        
+        .vip-card.hot::before {
+            content: '限时优惠';
+            position: absolute;
+            top: 12px;
+            right: -28px;
+            background: #ff4d4f;
+            color: #fff;
+            font-size: 11px;
+            padding: 4px 32px;
+            transform: rotate(45deg);
+        }
+        
+        .vip-card-icon {
+            font-size: 40px;
+            margin-bottom: 16px;
+        }
+        
+        .vip-card-name {
+            color: #fff;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .vip-card-desc {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+        
+        .vip-card-price {
+            margin-bottom: 16px;
+        }
+        
+        .vip-card-price .current {
+            color: #ffd700;
+            font-size: 32px;
+            font-weight: 700;
+        }
+        
+        .vip-card-price .current .unit {
+            font-size: 14px;
+            font-weight: 400;
+        }
+        
+        .vip-card-price .original {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 14px;
+            text-decoration: line-through;
+            margin-top: 4px;
+        }
+        
+        .vip-card-features {
+            list-style: none;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        
+        .vip-card-features li {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            padding: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .vip-card-features li::before {
+            content: '✓';
+            color: #ffd700;
+            font-weight: bold;
+        }
+        
+        .vip-card-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .vip-card-btn.gold {
+            background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+            color: #1a1a2e;
+        }
+        
+        .vip-card-btn.gold:hover {
+            box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+        }
+        
+        .vip-card-btn.silver {
+            background: linear-gradient(135deg, #c0c0c0 0%, #a0a0a0 100%);
+            color: #1a1a2e;
+        }
+        
+        .vip-card-btn.silver:hover {
+            box-shadow: 0 4px 20px rgba(192, 192, 192, 0.4);
+        }
+        
+        .vip-card-btn.diamond {
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            color: #fff;
+        }
+        
+        .vip-card-btn.diamond:hover {
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
+        }
+        
+        /* 弹窗底部 */
+        .vip-modal-footer {
+            padding: 16px 24px 24px;
+            text-align: center;
+        }
+        
+        .vip-modal-footer p {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 12px;
+        }
+        
+        .vip-modal-footer a {
+            color: #ffd700;
+            text-decoration: none;
+        }
+        
+        /* 响应式 */
+        @media (max-width: 600px) {
+            .vip-cards {
+                flex-direction: column;
+            }
+            
+            .vip-card.hot::before {
+                top: 8px;
+                right: -30px;
+                font-size: 10px;
+                padding: 2px 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 播放器容器 -->
+    <div class="player-container">
+        <!-- 自定义背景 -->
+        <div class="player-bg">
+            <div class="player-bg-content"></div>
+        </div>
+        
+        <!-- DPlayer 播放器 -->
+        <div id="dplayer"></div>
+    </div>
+    
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+    
+    <!-- 会员购买弹窗 -->
+    <div class="vip-modal-overlay" id="vipModal">
+        <div class="vip-modal">
+            <div class="vip-modal-header">
+                <h2>🎬 开通VIP会员</h2>
+                <p>畅享海量内容，广告-free观影体验</p>
+                <button class="vip-modal-close" onclick="closeVipModal()">×</button>
+            </div>
+            
+            <div class="vip-cards">
+                <!-- 黄金会员 -->
+                <div class="vip-card hot" onclick="selectVip(this, 'gold')">
+                    <div class="vip-card-icon">👑</div>
+                    <div class="vip-card-name">黄金会员</div>
+                    <div class="vip-card-desc">热门推荐<br>适合个人用户</div>
+                    <div class="vip-card-price">
+                        <div class="current">¥25<span class="unit">/月</span></div>
+                        <div class="original">¥45/月</div>
+                    </div>
+                    <ul class="vip-card-features">
+                        <li>跳过广告</li>
+                        <li>1080P高清</li>
+                        <li>热门剧集</li>
+                        <li>每月赠送观影券</li>
+                    </ul>
+                    <button class="vip-card-btn gold">立即开通</button>
+                </div>
+                
+                <!-- 白银会员 -->
+                <div class="vip-card" onclick="selectVip(this, 'silver')">
+                    <div class="vip-card-icon">🥈</div>
+                    <div class="vip-card-name">白银会员</div>
+                    <div class="vip-card-desc">基础特权<br>性价比之选</div>
+                    <div class="vip-card-price">
+                        <div class="current">¥15<span class="unit">/月</span></div>
+                        <div class="original">¥25/月</div>
+                    </div>
+                    <ul class="vip-card-features">
+                        <li>跳过广告</li>
+                        <li>720P高清</li>
+                        <li>部分剧集</li>
+                    </ul>
+                    <button class="vip-card-btn silver">立即开通</button>
+                </div>
+                
+                <!-- 钻石会员 -->
+                <div class="vip-card" onclick="selectVip(this, 'diamond')">
+                    <div class="vip-card-icon">💎</div>
+                    <div class="vip-card-name">钻石会员</div>
+                    <div class="vip-card-desc">尊享特权<br>家庭共享</div>
+                    <div class="vip-card-price">
+                        <div class="current">¥45<span class="unit">/月</span></div>
+                        <div class="original">¥68/月</div>
+                    </div>
+                    <ul class="vip-card-features">
+                        <li>跳过广告</li>
+                        <li>4K超清</li>
+                        <li>全部剧集</li>
+                        <li>杜比音效</li>
+                        <li>家庭共享3人</li>
+                    </ul>
+                    <button class="vip-card-btn diamond">立即开通</button>
+                </div>
+            </div>
+            
+            <div class="vip-modal-footer">
+                <p>开通即表示同意 <a href="#">《VIP会员服务协议》</a></p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 核心库 -->
+    <script src="/player/lib/DPlayer.min.js"></script>
+    <script src="/player/lib/hls.min.js"></script>
+    <script src="/player/lib/flv.min.js"></script>
+    <script src="/player/js/sponsor-manager.js"></script>
+    
+    <script>
+        let dp = null;
+        let adManager = null;
+        
+        // ========== 播放列表管理 ==========
+        let playlist = [];
+        let currentIndex = 0;
+        
+        // 加载播放列表
+        async function loadPlaylist() {
+            try {
+                const res = await fetch('/api/videos');
+                playlist = await res.json();
+                return playlist;
+            } catch (err) {
+                console.error('加载播放列表失败:', err);
+                return [];
+            }
+        }
+        
+        // 播放上一集
+        async function playPrev() {
+            if (playlist.length === 0) return;
+            currentIndex = (currentIndex - 1 + playlist.length) % playlist.length;
+            await initPlayer(playlist[currentIndex]);
+        }
+        
+        // 播放下一集
+        async function playNext() {
+            if (playlist.length === 0) return;
+            currentIndex = (currentIndex + 1) % playlist.length;
+            await initPlayer(playlist[currentIndex]);
+        }
+        
+        // 注入上一集/播放暂停/下一集按钮到控制栏
+        function injectEpisodeButtons() {
+            if (!dp) return;
+            const leftIcons = dp.container.querySelector('.dplayer-icons-left');
+            if (!leftIcons || leftIcons.querySelector('.dplayer-prev-btn')) return;
+            
+            const playBtn = leftIcons.querySelector('.dplayer-play-icon');
+            if (!playBtn) return;
+            
+            // 上一集按钮
+            const prevBtn = document.createElement('div');
+            prevBtn.className = 'dplayer-prev-btn';
+            prevBtn.title = '上一集';
+            prevBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>';
+            prevBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                playPrev();
+            });
+            
+            // 播放/暂停按钮（中间大按钮）
+            const pauseBtn = document.createElement('div');
+            pauseBtn.className = 'dplayer-pause-btn';
+            pauseBtn.title = '播放/暂停';
+            pauseBtn.innerHTML = dp.paused ? 
+                '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>' : 
+                '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+            pauseBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dp.toggle();
+                // 更新图标
+                setTimeout(() => {
+                    pauseBtn.innerHTML = dp.paused ? 
+                        '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>' : 
+                        '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+                }, 100);
+            });
+            
+            // 下一集按钮
+            const nextBtn = document.createElement('div');
+            nextBtn.className = 'dplayer-next-btn';
+            nextBtn.title = '下一集';
+            nextBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>';
+            nextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                playNext();
+            });
+            
+            // 在播放按钮位置插入：上一集 / 播放暂停 / 下一集
+            playBtn.parentNode.insertBefore(prevBtn, playBtn);
+            playBtn.parentNode.insertBefore(pauseBtn, playBtn);
+            playBtn.parentNode.insertBefore(nextBtn, playBtn);
+            
+            // 隐藏DPlayer默认的播放按钮
+            playBtn.style.display = 'none';
+            
+            // 监听播放状态变化，更新图标
+            dp.on('play', () => {
+                pauseBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+            });
+            dp.on('pause', () => {
+                pauseBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+            });
+        }
+        
+        // 检测视频类型
+        function detectVideoType(url) {
+            if (!url) return 'normal';
+            
+            const lowerUrl = url.toLowerCase();
+            
+            if (lowerUrl.includes('.m3u8')) return 'hls';
+            if (lowerUrl.includes('.flv')) return 'flv';
+            if (lowerUrl.includes('.mpd')) return 'dash';
+            if (lowerUrl.includes('.mp4') || lowerUrl.includes('.webm') || lowerUrl.includes('.ogg')) return 'normal';
+            
+            if (lowerUrl.includes('live') || lowerUrl.includes('stream') || lowerUrl.includes('hls')) return 'hls';
+            
+            return 'normal';
+        }
+        
+        // 显示提示
+        function showToast(msg, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = `toast toast-${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+        
+        // ========== 会员弹窗功能 ==========
+        function openVipModal() {
+            document.getElementById('vipModal').classList.add('show');
+        }
+        
+        function closeVipModal() {
+            document.getElementById('vipModal').classList.remove('show');
+        }
+        
+        function selectVip(card, type) {
+            // 移除其他选中状态
+            document.querySelectorAll('.vip-card').forEach(c => c.classList.remove('selected'));
+            // 添加选中状态
+            card.classList.add('selected');
+            
+            const names = {
+                'gold': '黄金会员',
+                'silver': '白银会员',
+                'diamond': '钻石会员'
+            };
+            
+            showToast(`已选择${names[type]}，正在跳转支付...`, 'info');
+            
+            // 模拟支付完成后关闭广告
+            setTimeout(() => {
+                closeVipModal();
+                if (adManager && adManager.isAdPlaying) {
+                    adManager.endAd();
+                    showToast('会员开通成功，广告已跳过！', 'info');
+                }
+            }, 1500);
+        }
+        
+        async function getVideoPlayInfo(videoId) {
+            const res = await fetch(`/api/videos/${videoId}/play`);
+            if (!res.ok) {
+                throw new Error('获取视频播放地址失败');
+            }
+            const data = await res.json();
+            if (!data.success || !data.video || !data.video.url) {
+                throw new Error(data.error || '视频播放地址不存在');
+            }
+            return data.video;
+        }
+
+        // 初始化播放器
+        async function initPlayer(videoData) {
+            if (dp) {
+                try { dp.destroy(); } catch (e) {}
+                dp = null;
+            }
+            
+            if (adManager) {
+                adManager.destroy();
+                adManager = null;
+            }
+            
+            const container = document.getElementById('dplayer');
+            container.innerHTML = '';
+            
+            const playInfo = await getVideoPlayInfo(videoData.id);
+            const playUrl = playInfo.url;
+            const playType = detectVideoType(playUrl) || playInfo.type || videoData.type || 'auto';
+
+            const options = {
+                container: container,
+                autoplay: false,
+                theme: '#00a1d6',
+                loop: false,
+                lang: 'zh-cn',
+                screenshot: true,
+                hotkey: true,
+                preload: 'auto',
+                volume: 0.7,
+                playbackSpeed: [0.5, 0.75, 1, 1.25, 1.5, 2],
+                video: {
+                    url: playUrl,
+                    type: playType
+                }
+            };
+            
+            if (playType === 'hls') {
+                options.video.type = 'customHls';
+                options.customType = {
+                    customHls: function(video, player) {
+                        if (Hls.isSupported()) {
+                            const hls = new Hls();
+                            hls.loadSource(video.src);
+                            hls.attachMedia(video);
+                            hls.on(Hls.Events.ERROR, function(event, data) {
+                                if (data.fatal) {
+                                    console.error('HLS致命错误:', data);
+                                    showToast('视频加载失败: ' + (data.details || '未知错误'), 'error');
+                                }
+                            });
+                        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                            video.src = playUrl;
+                        }
+                    }
+                };
+            }
+            
+            if (playType === 'flv') {
+                options.video.type = 'customFlv';
+                options.customType = {
+                    customFlv: function(video, player) {
+                        if (flvjs.isSupported()) {
+                            const flvPlayer = flvjs.createPlayer({
+                                type: 'flv',
+                                url: video.src,
+                                hasAudio: true,
+                                hasVideo: true,
+                            });
+                            flvPlayer.attachMediaElement(video);
+                            flvPlayer.load();
+                            flvPlayer.play();
+                        }
+                    }
+                };
+            }
+            
+            try {
+                dp = new DPlayer(options);
+                
+                // 初始化广告管理器（传入openVipModal函数）
+                adManager = new AdManager(dp, { 
+                    enabled: true,
+                    onOpenVip: openVipModal
+                });
+                
+                // 注入上一集/下一集按钮
+                setTimeout(injectEpisodeButtons, 500);
+                
+                // 控制栏自动隐藏（10秒后）
+                let controllerTimer = null;
+                const controller = dp.container.querySelector('.dplayer-controller');
+                
+                function showController() {
+                    if (controller) {
+                        controller.classList.remove('hide');
+                        controller.style.pointerEvents = 'auto';
+                    }
+                    // 重置计时器
+                    clearTimeout(controllerTimer);
+                    if (!dp.paused) {
+                        controllerTimer = setTimeout(() => {
+                            if (controller) {
+                                controller.classList.add('hide');
+                                controller.style.pointerEvents = 'none';
+                            }
+                        }, 10000);
+                    }
+                }
+                
+                // 鼠标移动时显示控制栏（桌面端）
+                dp.container.addEventListener('mousemove', showController);
+                
+                // 播放时启动自动隐藏
+                dp.on('play', () => {
+                    showController();
+                });
+                
+                // 暂停时显示控制栏
+                dp.on('pause', () => {
+                    clearTimeout(controllerTimer);
+                    if (controller) {
+                        controller.classList.remove('hide');
+                        controller.style.pointerEvents = 'auto';
+                    }
+                });
+                
+                // 自动播放下一集
+                dp.on('ended', async function() {
+                    if (adManager) {
+                        await adManager.playPostRoll();
+                    }
+                    // 自动播放下一集
+                    if (playlist.length > 1) {
+                        setTimeout(() => playNext(), 1000);
+                    }
+                });
+                
+                let isFirstPlay = true;
+                let skipNextPauseAd = false;
+                
+                // 前贴片逻辑
+                async function handleFirstPlay() {
+                    if (!isFirstPlay || !adManager.adsLoaded) return;
+                    isFirstPlay = false;
+                    if (adManager.hasPreRoll()) {
+                        skipNextPauseAd = true;
+                        dp.pause();
+                        await adManager.playPreRoll();
+                        skipNextPauseAd = false;
+                    }
+                }
+                
+                dp.on('play', async function() {
+                    // 播放时关闭暂停广告
+                    if (adManager && adManager.isAdPlaying && adManager.pauseOverlay) {
+                        adManager.endPauseAd();
+                    }
+                    
+                    if (isFirstPlay) {
+                        await handleFirstPlay();
+                    }
+                });
+                
+                // 中贴片广告（按时间触发）
+                let lastMidrollCheck = 0;
+                dp.on('timeupdate', function() {
+                    if (!adManager || !adManager.adsLoaded || adManager.isAdPlaying) return;
+                    const currentTime = dp.video.currentTime;
+                    // 每秒检查一次，避免频繁调用
+                    if (Math.floor(currentTime) !== lastMidrollCheck) {
+                        lastMidrollCheck = Math.floor(currentTime);
+                        adManager.checkMidRoll(currentTime);
+                    }
+                });
+                
+                document.title = videoData.title || '视频播放器';
+                
+                // ========== 移动端全屏 + 横竖屏切换 ==========
+                setupMobileFullscreen(dp);
+                
+                // ========== 暂停广告只在用户手动暂停时触发 ==========
+                // 标记视频是否已经开始播放过
+                let hasPlayed = false;
+                
+                dp.on('play', () => {
+                    hasPlayed = true;
+                });
+                
+                // 暂停广告（只有播放过再暂停才触发）
+                dp.on('pause', async function() {
+                    if (!hasPlayed) return; // 没播放过，不触发
+                    if (skipNextPauseAd || adManager.isAdPlaying) return;
+                    if (adManager && adManager.adsLoaded) {
+                        await adManager.playPauseAd();
+                    }
+                });
+                
+                // 跑马灯和角标广告（页面加载就可以展示）
+                adManager.onReady = function() {
+                    setTimeout(() => adManager.checkAndShowMarquee(), 1000);
+                    adManager.startOverlayRotation();
+                };
+                if (adManager.adsLoaded) {
+                    setTimeout(() => adManager.checkAndShowMarquee(), 1000);
+                    adManager.startOverlayRotation();
+                }
+                
+            } catch (err) {
+                console.error('播放器初始化失败:', err);
+                showToast('播放器初始化失败: ' + err.message, 'error');
+            }
+        }
+        
+        // 页面加载
+        async function loadDefaultVideo() {
+            const params = new URLSearchParams(window.location.search);
+            const videoId = params.get('id');
+            
+            // 先加载播放列表
+            await loadPlaylist();
+            
+            if (videoId) {
+                // 找到指定视频在列表中的位置
+                const idx = playlist.findIndex(v => v.id == videoId);
+                if (idx !== -1) {
+                    currentIndex = idx;
+                    await initPlayer(playlist[currentIndex]);
+                    return;
+                }
+            }
+            
+            if (playlist.length > 0) {
+                currentIndex = 0;
+                await initPlayer(playlist[currentIndex]);
+            } else {
+                document.getElementById('dplayer').innerHTML = `
+                    <div class="welcome-hint">
+                        <div class="icon">📺</div>
+                        <div class="title">视频播放器</div>
+                        <div class="desc">请在后台添加视频</div>
+                    </div>
+                `;
+            }
+        }
+        
+        loadDefaultVideo();
+
+        // ========== 移动端全屏 + 横竖屏 ==========
+        let isMobileFullscreen = false;
+        let isLandscape = false;
+        
+        // 检测是否移动端
+        function isMobile() {
+            return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+                   || (window.innerWidth <= 768);
+        }
+        
+        // 检测是否iOS
+        function isIOS() {
+            return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        }
+        
+        function setupMobileFullscreen(dp) {
+            if (!isMobile()) return;
+            
+            const container = document.querySelector('.player-container');
+            const video = dp.video;
+            
+            // 旋转SVG图标
+            const rotateSvg = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16.48 2.52c3.27 1.55 5.61 4.72 5.97 8.48h1.5C23.44 4.84 18.29 0 12 0l-.66.03 3.81 3.81 1.33-1.32zm-6.25-.77c-.59-.59-1.54-.59-2.12 0L1.75 8.11c-.59.59-.59 1.54 0 2.12l12.02 12.02c.59.59 1.54.59 2.12 0l6.36-6.36c.59-.59.59-1.54 0-2.12L10.23 1.75zm4.6 19.44L2.81 9.17l6.36-6.36 12.02 12.02-6.36 6.36zm-7.31.29C4.25 19.94 1.91 16.76 1.55 13H.05C.56 19.16 5.71 24 12 24l.66-.03-3.81-3.81-1.33 1.32z"/>
+            </svg>`;
+            
+            // 在DPlayer控制栏注入旋转按钮
+            function injectRotateButton() {
+                const rightIcons = dp.container.querySelector('.dplayer-icons-right');
+                if (!rightIcons || rightIcons.querySelector('.dplayer-rotate-btn')) return;
+                
+                const rotateBtn = document.createElement('div');
+                rotateBtn.className = 'dplayer-rotate-btn';
+                rotateBtn.innerHTML = rotateSvg;
+                rotateBtn.setAttribute('title', '横竖屏切换');
+                
+                rotateBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (!isMobileFullscreen) {
+                        // 还没全屏，先进全屏
+                        enterMobileFullscreen(dp, container, true);
+                    } else {
+                        toggleOrientation(dp, container);
+                    }
+                });
+                
+                // 插入到全屏按钮之前
+                const fullscreenBtn = rightIcons.querySelector('.dplayer-full-icon');
+                if (fullscreenBtn) {
+                    rightIcons.insertBefore(rotateBtn, fullscreenBtn);
+                } else {
+                    rightIcons.appendChild(rotateBtn);
+                }
+            }
+            
+            // 延迟注入，等DOM渲染完
+            setTimeout(injectRotateButton, 500);
+            
+            // 监听DPlayer自带全屏按钮，改用自定义移动端全屏
+            const fullscreenBtn = dp.container.querySelector('.dplayer-full-icon');
+            if (fullscreenBtn) {
+                fullscreenBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    
+                    if (isMobileFullscreen) {
+                        exitMobileFullscreen(dp, container);
+                    } else {
+                        enterMobileFullscreen(dp, container, true); // 默认横屏
+                    }
+                }, true);
+            }
+            
+            // 双击播放/暂停（单击只显示/隐藏控制栏）
+            let tapCount = 0;
+            let tapTimer = null;
+            dp.container.querySelector('.dplayer-video-wrap').addEventListener('click', function(e) {
+                tapCount++;
+                if (tapCount === 1) {
+                    tapTimer = setTimeout(() => {
+                        tapCount = 0;
+                        // 单击：显示/隐藏控制栏
+                        dp.controller.toggle();
+                    }, 300);
+                } else if (tapCount === 2) {
+                    clearTimeout(tapTimer);
+                    tapCount = 0;
+                    // 双击：播放/暂停
+                    dp.toggle();
+                }
+            });
+            
+            // 监听浏览器全屏事件（Android Chrome等）
+            document.addEventListener('fullscreenchange', onFullscreenChange);
+            document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+            
+            function onFullscreenChange() {
+                const isNativeFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
+                if (!isNativeFS && isMobileFullscreen) {
+                    // 用户通过系统手势退出了原生全屏
+                    exitMobileFullscreen(dp, container, true);
+                }
+            }
+            
+            // 监听物理返回键
+            window.addEventListener('popstate', function() {
+                if (isMobileFullscreen) {
+                    exitMobileFullscreen(dp, container);
+                }
+            });
+        }
+        
+        function enterMobileFullscreen(dp, container, landscape) {
+            isMobileFullscreen = true;
+            
+            // 尝试原生全屏（Android Chrome/WebView）
+            const el = container;
+            if (el.requestFullscreen) {
+                el.requestFullscreen().catch(() => {});
+            } else if (el.webkitRequestFullscreen) {
+                el.webkitRequestFullscreen().catch(() => {});
+            } else if (el.webkitEnterFullscreen) {
+                // iOS Safari: video元素全屏
+                dp.video.webkitEnterFullscreen();
+                // iOS用原生全屏，不需要自定义样式
+                return;
+            }
+            
+            // 隐藏页面其他元素
+            document.body.style.overflow = 'hidden';
+            container.classList.add('mobile-fullscreen');
+            
+            if (landscape) {
+                isLandscape = true;
+                // 尝试Screen Orientation API锁定横屏
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('landscape').catch(() => {});
+                }
+                // CSS fallback
+                container.classList.add('mobile-landscape');
+            } else {
+                isLandscape = false;
+                container.classList.remove('mobile-landscape');
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('portrait').catch(() => {});
+                }
+            }
+            
+            // 更新状态栏
+            if (window.StatusBar) {
+                StatusBar.hide();
+            }
+        }
+        
+        function exitMobileFullscreen(dp, container, fromBrowserEvent) {
+            isMobileFullscreen = false;
+            isLandscape = false;
+            
+            container.classList.remove('mobile-fullscreen', 'mobile-landscape');
+            document.body.style.overflow = '';
+            
+            // 退出原生全屏
+            if (!fromBrowserEvent) {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(() => {});
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen().catch(() => {});
+                }
+            }
+            
+            // 解锁屏幕方向
+            if (screen.orientation && screen.orientation.unlock) {
+                screen.orientation.unlock();
+            }
+            
+            if (window.StatusBar) {
+                StatusBar.show();
+            }
+        }
+        
+        function toggleOrientation(dp, container) {
+            if (isLandscape) {
+                isLandscape = false;
+                container.classList.remove('mobile-landscape');
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('portrait').catch(() => {});
+                }
+                showToast('已切换到竖屏');
+            } else {
+                isLandscape = true;
+                container.classList.add('mobile-landscape');
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('landscape').catch(() => {});
+                }
+                showToast('已切换到横屏');
+            }
+        }
+    </script>
+</body>
+</html>
