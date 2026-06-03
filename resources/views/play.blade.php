@@ -214,6 +214,14 @@
         .dp-danmaku-bar .dm-input::placeholder { color: rgba(255,255,255,.4); }
         .dp-danmaku-bar .dm-send { padding: 5px 14px; border-radius: 12px; background: #00be06; color: #fff; border: none; font-size: 12px; font-weight: 600; cursor: pointer; transition: .2s; white-space: nowrap; flex-shrink: 0; }
         .dp-danmaku-bar .dm-send:hover { background: #00a305; }
+
+        /* B站风格加载动画 */
+        .bili-loading-wrap { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 150; pointer-events: none; background: rgba(0,0,0,.6); opacity: 0; transition: opacity .3s; }
+        .bili-loading-wrap.show { opacity: 1; }
+        .bili-loading-icon { width: 48px; height: 48px; animation: bili-spin 1s linear infinite; }
+        .bili-loading-icon circle { fill: none; stroke: #00a1d6; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 120; stroke-dashoffset: 90; }
+        .bili-loading-text { color: rgba(255,255,255,.7); font-size: 13px; margin-top: 10px; letter-spacing: 1px; }
+        @keyframes bili-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -246,6 +254,10 @@
     <div class="player-section">
         <div class="player-box">
             <div id="dplayer"></div>
+            <div class="bili-loading-wrap" id="biliLoading">
+                <svg class="bili-loading-icon" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20"/></svg>
+                <div class="bili-loading-text">加载中...</div>
+            </div>
             <div class="player-logo" id="player-logo" style="display:none;"></div>
         </div>
         <div class="video-info" id="videoInfo">
@@ -447,6 +459,10 @@ async function initPlayer(video) {
     if (dp) dp.destroy();
     if (mediaMgr) mediaMgr.destroy();
 
+    // 显示B站风格loading
+    var loadingEl = document.getElementById('biliLoading');
+    if (loadingEl) loadingEl.classList.add('show');
+
     currentVideo = video;
     document.title = video.title + ' - DPlayer影视';
 
@@ -493,7 +509,12 @@ async function initPlayer(video) {
     mediaMgr.showQrcode();
     mediaMgr.showBanner();
     var hasPlayed = false;
-    dp.on('play', () => { hasPlayed = true; mediaMgr.clearPausePromo(); });
+    dp.on('play', () => {
+        hasPlayed = true;
+        mediaMgr.clearPausePromo();
+        // 隐藏loading
+        if (loadingEl) loadingEl.classList.remove('show');
+    });
     dp.on('timeupdate', () => { if (!dp.video.paused) mediaMgr.checkMidroll(dp.video.currentTime); });
     dp.on('pause', () => { if (hasPlayed && !mediaMgr.skipNextPausePromo && !mediaMgr._inAdSlot) mediaMgr.playPausePromo(); });
     dp.on('ended', async () => { mediaMgr._inAdSlot = true; const played = await mediaMgr.playPostroll(); if (!played) mediaMgr._inAdSlot = false; });

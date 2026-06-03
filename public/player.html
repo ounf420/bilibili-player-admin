@@ -13,11 +13,36 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden}
 .wm.bl{bottom:60px;left:12px}.wm.br{bottom:60px;right:12px}
 .wm img{max-width:100px;max-height:32px;opacity:.7}
 .wm span{color:rgba(255,255,255,.5);font-size:12px;text-shadow:0 1px 3px rgba(0,0,0,.5);user-select:none}
+
+/* B站风格加载动画 */
+.bili-loading-wrap{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:150;pointer-events:none;background:rgba(0,0,0,.6);opacity:0;transition:opacity .3s}
+.bili-loading-wrap.show{opacity:1}
+.bili-loading-icon{width:48px;height:48px;animation:bili-spin 1s linear infinite}
+.bili-loading-icon circle{fill:none;stroke:#00a1d6;stroke-width:3;stroke-linecap:round;stroke-dasharray:120;stroke-dashoffset:90}
+.bili-loading-text{color:rgba(255,255,255,.7);font-size:13px;margin-top:10px;letter-spacing:1px}
+@keyframes bili-spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+
+/* 控制栏按钮 - 上一集/播放/下一集 */
+.dplayer-icons-left .dplayer-prev-btn,
+.dplayer-icons-left .dplayer-next-btn,
+.dplayer-icons-left .dplayer-pause-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;cursor:pointer;color:#fff;transition:all .2s;border-radius:4px}
+.dplayer-icons-left .dplayer-prev-btn:hover,
+.dplayer-icons-left .dplayer-next-btn:hover,
+.dplayer-icons-left .dplayer-pause-btn:hover{color:#00a1d6;background:rgba(255,255,255,.1)}
+.dplayer-icons-left .dplayer-prev-btn svg,
+.dplayer-icons-left .dplayer-next-btn svg,
+.dplayer-icons-left .dplayer-pause-btn svg{width:20px;height:20px;fill:currentColor}
+.dplayer-icons-left .dplayer-pause-btn{width:40px;height:40px}
+.dplayer-icons-left .dplayer-pause-btn svg{width:24px;height:24px}
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dplayer@1.27.1/dist/DPlayer.min.css">
 </head>
 <body>
 <div id="p"></div>
+<div class="bili-loading-wrap" id="biliLoading">
+    <svg class="bili-loading-icon" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20"/></svg>
+    <div class="bili-loading-text">加载中...</div>
+</div>
 <div class="wm" id="wm" style="display:none"></div>
 <script src="https://cdn.jsdelivr.net/npm/dplayer@1.27.1/dist/DPlayer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
@@ -1257,6 +1282,10 @@ function dt(u){
 async function api(p){var r=await fetch(BASE+p);return r.json()}
 
 async function init(){
+  // 显示loading
+  var loadingEl = document.getElementById('biliLoading');
+  if (loadingEl) loadingEl.classList.add('show');
+
   var video;
   if(vurl){
     video={url:vurl,type:vtype||dt(vurl),cover:vcover,title:"Player"};
@@ -1281,6 +1310,16 @@ async function init(){
     screenshot:true,hotkey:true,preload:"auto",volume:.7,mutex:true,video:vc
   });
 
+  // 注入控制栏按钮
+  setTimeout(function(){injectPlayerButtons(dp, video)}, 400);
+
+  // 隐藏loading
+  dp.on("play",function(){
+    if (loadingEl) loadingEl.classList.remove('show');
+  });
+  // 超时自动隐藏
+  setTimeout(function(){if (loadingEl) loadingEl.classList.remove('show')}, 5000);
+
   var mm=new MediaManager(dp);
   await mm.loadCampaigns();
   await mm.playSplash();
@@ -1301,6 +1340,55 @@ async function init(){
     else{el.innerHTML="<span>"+logoText+"</span>";}
   }
   console.log("[Player] OK");
+}
+
+// 注入控制栏按钮
+function injectPlayerButtons(dp, video){
+  var leftIcons = dp.container.querySelector('.dplayer-icons-left');
+  if (!leftIcons || leftIcons.querySelector('.dplayer-prev-btn')) return;
+
+  var playBtn = leftIcons.querySelector('.dplayer-play-icon');
+  if (!playBtn) return;
+
+  // 上一集
+  var prevBtn = document.createElement('div');
+  prevBtn.className = 'dplayer-prev-btn';
+  prevBtn.title = '上一集';
+  prevBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>';
+  prevBtn.addEventListener('click', function(e) { e.stopPropagation(); });
+
+  // 播放/暂停
+  var pauseBtn = document.createElement('div');
+  pauseBtn.className = 'dplayer-pause-btn';
+  pauseBtn.title = '播放/暂停';
+  pauseBtn.innerHTML = dp.paused ?
+      '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>' :
+      '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+  pauseBtn.addEventListener('click', function(e) {
+      e.stopPropagation(); dp.toggle();
+      setTimeout(function() {
+          pauseBtn.innerHTML = dp.paused ?
+              '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>' :
+              '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+      }, 100);
+  });
+
+  // 下一集
+  var nextBtn = document.createElement('div');
+  nextBtn.className = 'dplayer-next-btn';
+  nextBtn.title = '下一集';
+  nextBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>';
+  nextBtn.addEventListener('click', function(e) { e.stopPropagation(); });
+
+  // 插入按钮
+  playBtn.parentNode.insertBefore(prevBtn, playBtn);
+  playBtn.parentNode.insertBefore(pauseBtn, playBtn);
+  playBtn.parentNode.insertBefore(nextBtn, playBtn);
+  playBtn.style.display = 'none';
+
+  // 同步状态
+  dp.on('play', function() { pauseBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'; });
+  dp.on('pause', function() { pauseBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>'; });
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
 })();
