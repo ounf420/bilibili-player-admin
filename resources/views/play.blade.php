@@ -170,7 +170,7 @@ function initPlayer(v) {
 
 async function loadAds(videoId) {
     try {
-        const r = await fetch('/api/ads?video_id=' + videoId);
+        const r = await fetch('/api/campaigns?video_id=' + videoId);
         const d = await r.json();
         const ads = d.data || d;
         if (!ads || !ads.length) return;
