@@ -45,10 +45,6 @@
         .player-logo.bottom-right { bottom: 70px; right: 20px; }
         .player-logo img { max-width: 120px; max-height: 40px; opacity: 0.7; }
         .player-logo .text-watermark { color: rgba(255,255,255,0.5); font-size: 14px; font-weight: 500; text-shadow: 0 1px 3px rgba(0,0,0,0.5); white-space: nowrap; user-select: none; }
-        .preroll-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 200; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-        .preroll-overlay video { width: 100%; height: 100%; object-fit: contain; }
-        .preroll-skip { position: absolute; bottom: 80px; right: 30px; padding: 10px 24px; border-radius: 20px; background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.3); font-size: 14px; cursor: pointer; backdrop-filter: blur(8px); transition: .2s; }
-        .preroll-skip:hover { background: rgba(255,255,255,.25); }
     </style>
 </head>
 <body>
@@ -59,7 +55,7 @@
 <script src="https://cdn.jsdelivr.net/npm/flv.js@1.6.2/dist/flv.min.js"></script>
 <script src="/js/media-engine.js"></script>
 <script>
-let dp = null, settings = {}, currentVideo = null;
+let dp = null, mediaMgr = null, settings = {}, currentVideo = null;
 
 function getCsrf() {
     return document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : '';
@@ -101,6 +97,14 @@ function applyWatermark() {
     el.style.display = 'block';
 }
 
+function playDirectUrl(videoUrl, title) {
+    if (!videoUrl) return;
+    const v = { id: 'direct', video_url: videoUrl, url: videoUrl, title: title || '正在播放' };
+    currentVideo = v;
+    document.title = (title || '正在播放') + ' - 播放器';
+    initPlayer(v);
+}
+
 async function loadVideoById(id, pushState) {
     if (!id) return;
     try {
@@ -119,6 +123,7 @@ async function loadVideoById(id, pushState) {
 
 function initPlayer(v) {
     if (dp) { dp.destroy(); dp = null; }
+    if (mediaMgr) { mediaMgr = null; }
     const container = document.getElementById('dplayer');
     container.innerHTML = '';
     let videoUrl = v.video_url || v.url || '';
@@ -162,41 +167,15 @@ function initPlayer(v) {
     };
     dp = new DPlayer(dpOptions);
     window.dp = dp;
+    
+    // 初始化广告引擎
+    mediaMgr = new MediaManager(dp, { enabled: true });
+    
     dp.on('play', function() {
-        fetch('/api/videos/' + v.id + '/play', { method: 'POST', headers: getHeaders() }).catch(function() {});
+        if (v.id !== 'direct') {
+            fetch('/api/videos/' + v.id + '/play', { method: 'POST', headers: getHeaders() }).catch(function() {});
+        }
     });
-    loadAds(v.id);
-}
-
-async function loadAds(videoId) {
-    try {
-        const r = await fetch('/api/campaigns?video_id=' + videoId);
-        const d = await r.json();
-        const ads = d.data || d;
-        if (!ads || !ads.length) return;
-        const preroll = ads.find(function(a) { return a.type === 'preroll'; });
-        if (preroll) playAd(preroll);
-    } catch (e) {
-        console.warn('loadAds failed', e);
-    }
-}
-
-function playAd(ad) {
-    if (!dp || !ad) return;
-    dp.pause();
-    const overlay = document.createElement('div');
-    overlay.className = 'preroll-overlay';
-    overlay.innerHTML = '<video src="' + ad.video_url + '" autoplay muted></video><button class="preroll-skip" onclick="this.parentElement.remove();dp.play();">跳过广告 ' + (ad.duration || 5) + 's</button>';
-    document.querySelector('.dplayer').appendChild(overlay);
-    setTimeout(function() { overlay.remove(); dp.play(); }, (ad.duration || 5) * 1000);
-}
-
-function playDirectUrl(videoUrl, title) {
-    if (!videoUrl) return;
-    const v = { id: 'direct', video_url: videoUrl, title: title || '正在播放' };
-    currentVideo = v;
-    document.title = (title || '正在播放') + ' - 播放器';
-    initPlayer(v);
 }
 
 async function init() {
