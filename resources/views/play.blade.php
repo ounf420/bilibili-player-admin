@@ -173,7 +173,32 @@ function initPlayer(v) {
     mediaMgr.onReady = function() {
         // 广告加载完成后播放前贴片
         mediaMgr.playPreRoll();
+        // 启动角标广告随机展示
+        mediaMgr.startOverlayRotation();
+        // 显示跑马灯广告
+        mediaMgr.showMarquee();
     };
+    
+    // 监听播放进度，检查中贴片广告
+    dp.on('timeupdate', function() {
+        if (mediaMgr && dp) {
+            mediaMgr.checkMidRoll(dp.video.currentTime);
+        }
+    });
+    
+    // 监听暂停事件，显示暂停广告
+    dp.on('pause', function() {
+        if (mediaMgr && !mediaMgr.isAdPlaying) {
+            mediaMgr.playPausePromo();
+        }
+    });
+    
+    // 监听播放事件，隐藏暂停广告
+    dp.on('play', function() {
+        if (mediaMgr) {
+            mediaMgr.endPausePromo();
+        }
+    });
     
     dp.on('play', function() {
         if (v.id !== 'direct') {
@@ -200,6 +225,11 @@ async function init() {
         } catch (e) {
             console.error('load videos failed', e);
         }
+    }
+    
+    // 开屏广告
+    if (mediaMgr) {
+        mediaMgr.playSplash();
     }
 }
 
