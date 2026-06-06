@@ -171,8 +171,11 @@ function initPlayer(v) {
     // 初始化广告引擎
     mediaMgr = new MediaManager(dp, { enabled: true });
     mediaMgr.onReady = function() {
-        // 广告加载完成后播放前贴片
-        mediaMgr.playPreRoll();
+        // 开屏广告
+        mediaMgr.playSplash().then(function() {
+            // 开屏广告播完后播放前贴片
+            mediaMgr.playPreRoll();
+        });
         // 启动角标广告随机展示
         mediaMgr.startOverlayRotation();
         // 显示跑马灯广告
@@ -225,11 +228,6 @@ async function init() {
         } catch (e) {
             console.error('load videos failed', e);
         }
-    }
-    
-    // 开屏广告
-    if (mediaMgr) {
-        mediaMgr.playSplash();
     }
 }
 
