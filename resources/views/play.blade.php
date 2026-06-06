@@ -170,6 +170,10 @@ function initPlayer(v) {
     
     // 初始化广告引擎
     mediaMgr = new MediaManager(dp, { enabled: true });
+    mediaMgr.onReady = function() {
+        // 广告加载完成后播放前贴片
+        mediaMgr.playPreRoll();
+    };
     
     dp.on('play', function() {
         if (v.id !== 'direct') {
