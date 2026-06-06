@@ -191,11 +191,22 @@ function playAd(ad) {
     setTimeout(function() { overlay.remove(); dp.play(); }, (ad.duration || 5) * 1000);
 }
 
+function playDirectUrl(videoUrl, title) {
+    if (!videoUrl) return;
+    const v = { id: 'direct', video_url: videoUrl, title: title || '正在播放' };
+    currentVideo = v;
+    document.title = (title || '正在播放') + ' - 播放器';
+    initPlayer(v);
+}
+
 async function init() {
     await loadSettings();
     const params = new URLSearchParams(location.search);
+    const videoUrl = params.get('url');
     const videoId = params.get('id');
-    if (videoId) {
+    if (videoUrl) {
+        playDirectUrl(decodeURIComponent(videoUrl), params.get('title'));
+    } else if (videoId) {
         await loadVideoById(videoId, false);
     } else {
         try {
