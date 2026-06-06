@@ -10,12 +10,12 @@ class GrowthController extends Controller
     // 成长等级配置
     const LEVELS = [
         0 => ['name' => '普通用户', 'min' => 0,    'icon' => '👤'],
-        1 => ['name' => 'VIP1',     'min' => 0,    'icon' => '🥉'],
-        2 => ['name' => 'VIP2',     'min' => 200,  'icon' => '🥈'],
-        3 => ['name' => 'VIP3',     'min' => 600,  'icon' => '🥇'],
-        4 => ['name' => 'VIP4',     'min' => 2000, 'icon' => '🏅'],
-        5 => ['name' => 'VIP5',     'min' => 5000, 'icon' => '🎖️'],
-        6 => ['name' => 'VIP6',     'min' => 15000,'icon' => '👑'],
+        1 => ['name' => '等级1',     'min' => 0,    'icon' => '🥉'],
+        2 => ['name' => '等级2',     'min' => 200,  'icon' => '🥈'],
+        3 => ['name' => '等级3',     'min' => 600,  'icon' => '🥇'],
+        4 => ['name' => '等级4',     'min' => 2000, 'icon' => '🏅'],
+        5 => ['name' => '等级5',     'min' => 5000, 'icon' => '🎖️'],
+        6 => ['name' => '等级6',     'min' => 15000,'icon' => '👑'],
     ];
 
     // 每日获取成长值上限

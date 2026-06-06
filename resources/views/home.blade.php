@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>影视中心 - 智能视频广告管理平台</title>
+    <title>播放器 - 智能视频广告管理平台</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -37,12 +37,10 @@
             width: 16px; height: 2px; background: #e6a817; border-radius: 1px;
         }
         .nav-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
-        .nav-vip {
             padding: 5px 14px; border-radius: 16px; font-size: 12px; font-weight: 500;
             background: linear-gradient(135deg, #e6a817, #f0c040); color: #1a1200;
             cursor: pointer; white-space: nowrap; transition: transform 0.2s;
         }
-        .nav-vip:hover { transform: scale(1.05); }
         .nav-login {
             padding: 6px 16px; border-radius: 20px; font-size: 13px;
             background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; white-space: nowrap;
@@ -196,7 +194,6 @@
                 border-bottom: 1px solid rgba(255,255,255,0.06);
             }
             .mobile-menu-btn { display: block; }
-            .nav-vip { padding: 4px 10px; font-size: 11px; }
             .nav-login { padding: 5px 12px; font-size: 12px; }
 
             .hero-section { padding: 60px 16px 50px; }
@@ -216,16 +213,16 @@
 
 <!-- 导航栏 -->
 <nav class="nav-bar">
-    <a href="/" class="nav-logo">影视<span>中心</span></a>
+    <a href="/" class="nav-logo">播放器<span>系统</span></a>
     <button class="mobile-menu-btn" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
     <div class="nav-links" id="navLinks">
         <a href="/" class="nav-link active">首页</a>
-        <a href="/v" class="nav-link">影视中心</a>
+        
         <a href="/player" class="nav-link">播放器</a>
-        <a href="/vip" class="nav-link">VIP会员</a>
+        
     </div>
     <div class="nav-right">
-        <a href="/vip" class="nav-vip">👑 VIP</a>
+        
         <a href="/login" class="nav-login" id="navLoginBtn">登录</a>
         <a href="/user" class="nav-avatar" id="navAvatar" style="display:none;">U</a>
     </div>
@@ -234,10 +231,10 @@
 <!-- Hero -->
 <section class="hero-section">
     <div class="hero-badge">🎬 智能视频广告管理平台</div>
-    <h1 class="hero-title">打造专属<span>影视广告</span>生态系统</h1>
+    <h1 class="hero-title">打造专属<span>视频广告</span>生态系统</h1>
     <p class="hero-sub">集成17种广告类型的全栈视频播放器管理系统，支持多格式视频播放、智能广告投放、用户管理与数据分析</p>
     <div class="hero-actions">
-        <a href="/v" class="btn-primary">🎬 进入影视中心</a>
+        
         <a href="/player" class="btn-secondary">▶ 播放器演示</a>
     </div>
 </section>
@@ -295,10 +292,10 @@
         <div class="feature-card">
             <div class="feature-icon" style="background:rgba(251,114,153,0.1);">👥</div>
             <div class="feature-name">用户体系</div>
-            <div class="feature-desc">完整的注册/登录/找回密码流程，账号中心管理，VIP会员等级体系，管理员与普通用户权限隔离</div>
+            <div class="feature-desc">完整的注册/登录/找回密码流程，账号中心管理，管理员与普通用户权限隔离</div>
             <div class="feature-tags">
                 <span class="feature-tag">注册登录</span>
-                <span class="feature-tag">VIP会员</span>
+                
                 <span class="feature-tag">权限管理</span>
             </div>
         </div>
@@ -386,16 +383,16 @@
 <!-- CTA -->
 <section class="cta-section">
     <h2 class="cta-title">开始体验</h2>
-    <p class="cta-desc">探索影视中心，体验智能广告播放系统</p>
+    <p class="cta-desc">体验智能广告播放系统</p>
     <div class="hero-actions">
-        <a href="/v" class="btn-primary">🎬 影视中心</a>
-        <a href="/vip" class="btn-secondary">👑 VIP会员</a>
+        
+        
     </div>
 </section>
 
 <!-- 页脚 -->
 <footer class="site-footer">
-    <div>© 2026 影视中心 · 智能视频广告管理平台 · <a href="/player">播放器演示</a></div>
+    <div>© 2026 播放器 · 智能视频广告管理平台 · <a href="/player">播放器演示</a></div>
     <div style="margin-top:4px;">Powered by Laravel + DPlayer + Filament</div>
 </footer>
 

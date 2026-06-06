@@ -70,7 +70,6 @@ class NoticesTable
                     ->label('目标')
                     ->formatStateUsing(fn (string $state): string => match ($state) {
                         'all' => '全部',
-                        'vip' => 'VIP',
                         'new' => '新用户',
                         default => $state,
                     }),
@@ -88,7 +87,7 @@ class NoticesTable
                     ->formatStateUsing(fn (string $state): string => match ($state) {
                         'all' => '全站',
                         'home' => '首页',
-                        'v' => '影视页',
+                        
                         'account' => '账号中心',
                         default => $state,
                     }),

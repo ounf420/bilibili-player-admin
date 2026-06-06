@@ -11,7 +11,6 @@
 :root {
             --primary: #00be06; --primary-dark: #00a305; --primary-light: #e8fcee;
             --accent: #fb7299; --accent-dark: #e85680;
-            --vip-gold: #f5a623;
             --bg: #f5f7fa; --bg-card: #ffffff;
             --text: #1a1a2e; --text-secondary: #6b7280; --text-muted: #9ca3af;
             --border: #e5e7eb;
@@ -40,8 +39,6 @@ background: #1a1a2e;
         .navbar-user { display: flex; align-items: center; gap: 12px; }
         .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
         .btn-primary { background: linear-gradient(135deg, #00be06, #00a305); color: #fff; }
-        .btn-vip { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #fff; }
-        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
         .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
         .btn-danger { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
         .btn-danger:hover { background: #ef4444; color: #fff; }
@@ -65,17 +62,6 @@ background: #1a1a2e;
         }
         .profile-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
         .profile-id { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
-        .vip-badge {
-            display: inline-flex; align-items: center; gap: 4px; padding: 4px 14px;
-            border-radius: 20px; font-size: 12px; font-weight: 700;
-        }
-        .vip-badge.vip-0 { background: var(--bg); color: var(--text-muted); }
-        .vip-badge.vip-1 { background: linear-gradient(135deg, #f5a623, #ff6b35); color: #fff; }
-        .vip-badge.vip-2 { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #fff; }
-        .profile-stats {
-            display: flex; justify-content: space-around; margin-top: 16px;
-            padding-top: 16px; border-top: 1px solid var(--border);
-        }
         .stat-item { text-align: center; }
         .stat-num { font-size: 20px; font-weight: 800; color: var(--primary); }
         .stat-label { font-size: 12px; color: var(--text-muted); }
@@ -111,28 +97,12 @@ background: #1a1a2e;
         .video-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
         .video-card .thumb { position: relative; padding-top: 56.25%; background: linear-gradient(135deg, #667eea, #764ba2); }
         .video-card .thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-        .video-card .thumb .badge-vip { position: absolute; top: 6px; left: 6px; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; color: #fff; }
         .video-card .thumb .progress-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: rgba(0,0,0,0.3); }
         .video-card .thumb .progress-bar .bar { height: 100%; background: var(--accent); border-radius: 0 2px 0 0; }
         .video-card .info { padding: 10px 12px; }
         .video-card .info h4 { font-size: 13px; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .video-card .info .meta { font-size: 11px; color: var(--text-muted); }
 
-        /* VIP INFO */
-        .vip-info-card {
-            background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: var(--radius-lg);
-            padding: 28px; color: #fff; margin-bottom: 20px;
-        }
-        .vip-info-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-        .vip-info-top h3 { font-size: 20px; }
-        .vip-info-top .level-tag { padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; }
-        .vip-info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-        .vip-info-item { text-align: center; }
-        .vip-info-item .num { font-size: 24px; font-weight: 800; color: #ffd700; }
-        .vip-info-item .label { font-size: 12px; color: rgba(255,255,255,0.5); }
-
-        /* SETTINGS FORM */
-        .form-group { margin-bottom: 20px; }
         .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
         .form-input {
             width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border);
@@ -189,8 +159,6 @@ background: #1a1a2e;
             .sidebar { width: 100%; }
             .video-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
             .form-row { flex-direction: column; gap: 0; }
-            .vip-info-grid { grid-template-columns: 1fr; }
-        }
     </style>
 </head>
 <body>
@@ -204,9 +172,9 @@ background: #1a1a2e;
         <button class="mobile-menu-btn" onclick="document.getElementById('navLinks').classList.toggle('open')"><i class="fas fa-bars"></i></button>
         <div class="navbar-links" id="navLinks">
             <a href="/">首页</a>
-            <a href="/v">影视中心</a>
+            
             <a href="/player">播放器演示</a>
-            <a href="/vip">VIP会员</a>
+            
         </div>
         <div class="navbar-user" id="navUser"></div>
     </div>
@@ -228,7 +196,6 @@ background: #1a1a2e;
             <img src="" class="profile-avatar" id="userAvatar" alt="">
             <div class="profile-name" id="userName">-</div>
             <div class="profile-id" id="userId">-</div>
-            <span class="vip-badge vip-0" id="userVip">普通用户</span>
             <div class="profile-stats">
                 <div class="stat-item"><div class="stat-num" id="statFav">0</div><div class="stat-label">收藏</div></div>
                 <div class="stat-item"><div class="stat-num" id="statHistory">0</div><div class="stat-label">观看</div></div>
@@ -238,8 +205,6 @@ background: #1a1a2e;
         <div class="side-menu">
             <div class="side-menu-item active" data-panel="history"><i class="fas fa-history"></i> 观看历史 <span class="count" id="countHistory">0</span></div>
             <div class="side-menu-item" data-panel="favorites"><i class="fas fa-heart"></i> 我的收藏 <span class="count" id="countFav">0</span></div>
-            <div class="side-menu-item" data-panel="vip"><i class="fas fa-crown"></i> VIP信息</div>
-
         </div>
     </div>
 
@@ -272,32 +237,73 @@ background: #1a1a2e;
             </div>
         </div>
 
-        <!-- VIP信息 -->
-        <div class="panel" id="panel-vip">
-            <div class="panel-header"><h2>VIP会员信息</h2></div>
-            <div class="vip-info-card">
-                <div class="vip-info-top">
-                    <h3 id="vipTitle">我的会员</h3>
-                    <span class="level-tag" id="vipTag" style="background:rgba(255,255,255,0.1);">普通用户</span>
                 </div>
-                <div class="vip-info-grid">
-                    <div class="vip-info-item"><div class="num" id="vipLevel">-</div><div class="label">会员等级</div></div>
-                    <div class="vip-info-item"><div class="num" id="vipExpire">-</div><div class="label">到期时间</div></div>
-                    <div class="vip-info-item"><div class="num" id="vipDays">-</div><div class="label">剩余天数</div></div>
                 </div>
                 <div style="text-align:center;margin-top:20px;">
-                    <a href="/vip" class="btn btn-vip"><i class="fas fa-crown"></i> 开通/续费VIP</a>
+                    
                 </div>
             </div>
             <div class="setting-card">
-                <h3><i class="fas fa-star"></i> VIP特权</h3>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">
                     <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-secondary);"><i class="fas fa-check-circle" style="color:#10b981;"></i> 免广告</div>
                     <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-secondary);"><i class="fas fa-check-circle" style="color:#10b981;"></i> 1080P/4K画质</div>
-                    <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-secondary);"><i class="fas fa-check-circle" style="color:#10b981;"></i> VIP专属内容</div>
                     <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-secondary);"><i class="fas fa-check-circle" style="color:#10b981;"></i> 离线缓存</div>
                     <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-secondary);"><i class="fas fa-check-circle" style="color:#10b981;"></i> 多设备播放</div>
                     <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-secondary);"><i class="fas fa-check-circle" style="color:#10b981;"></i> 专属客服</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 商城中心 -->
+        <div class="panel" id="panel-shop">
+            <div class="panel-header">
+                <div><h2>商城中心</h2><span class="sub">版本升级与额度购买</span></div>
+            </div>
+
+            <!-- 当前版本信息 -->
+                    <h3>我的版本</h3>
+                    <span class="level-tag" id="shopVersionTag" style="background:rgba(255,255,255,0.1);">免费版</span>
+                </div>
+                </div>
+            </div>
+
+            <!-- 卡密兑换 -->
+            <div class="setting-card">
+                <h3><i class="fas fa-ticket-alt"></i> 卡密兑换</h3>
+                <div style="display:flex;gap:12px;align-items:flex-end;">
+                    <div class="form-group" style="flex:1;margin-bottom:0;">
+                        <label class="form-label">卡号</label>
+                        <input type="text" class="form-input" id="redeemCardNo" placeholder="请输入卡号">
+                    </div>
+                    <div class="form-group" style="flex:1;margin-bottom:0;">
+                        <label class="form-label">卡密</label>
+                        <input type="text" class="form-input" id="redeemCardSecret" placeholder="请输入卡密">
+                    </div>
+                    <button class="btn btn-primary" onclick="redeemCard()" style="white-space:nowrap;height:42px;">
+                        <i class="fas fa-exchange-alt"></i> 兑换
+                    </button>
+                </div>
+            </div>
+
+            <!-- 套餐列表 -->
+            <div class="setting-card">
+                <h3><i class="fas fa-crown"></i> 版本套餐</h3>
+                <div style="display:flex;gap:8px;margin-bottom:16px;">
+                    <button class="btn btn-outline btn-sm active" onclick="filterPlans('all', this)">全部</button>
+                    <button class="btn btn-outline btn-sm" onclick="filterPlans(1, this)">基础版</button>
+                    <button class="btn btn-outline btn-sm" onclick="filterPlans(2, this)">专业版</button>
+                    <button class="btn btn-outline btn-sm" onclick="filterPlans(3, this)">旗舰版</button>
+                </div>
+                <div id="plansGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;"></div>
+            </div>
+
+            <!-- 订单记录 -->
+            <div class="setting-card">
+                <h3><i class="fas fa-receipt"></i> 订单记录</h3>
+                <div id="ordersList"></div>
+                <div class="empty-state" id="ordersEmpty" style="display:none;">
+                    <i class="fas fa-receipt"></i>
+                    <p>暂无订单记录</p>
                 </div>
             </div>
         </div>
@@ -312,7 +318,7 @@ background: #1a1a2e;
     <div class="footer-inner">
         <div class="footer-brand"><div class="logo-icon"><i class="fas fa-play"></i></div><span>DPlayer 广告系统</span></div>
         <div class="footer-links">
-            <a href="/">首页</a><a href="/v">影视中心</a><a href="/vip">VIP会员</a><a href="/player">播放器</a>
+            <a href="/">首页</a><a href="/player">播放器</a>
         </div>
         <div class="footer-copy">© 2026 DPlayer 广告播放器管理系统</div>
     </div>
@@ -351,7 +357,7 @@ function initNav() {
         try {
             const u = JSON.parse(userStr);
             navUser.innerHTML = `
-                <a href="/vip" class="btn btn-vip" style="font-size:12px;padding:6px 14px;"><i class="fas fa-crown"></i> VIP</a>
+                
                 <a href="/user" class="btn btn-primary" style="font-size:12px;padding:6px 14px;"><i class="fas fa-user"></i> 用户中心</a>`;
         } catch(e) {}
     } else {
@@ -379,32 +385,13 @@ function renderProfile(u) {
     document.getElementById('userAvatar').src = u.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.nickname || u.username || 'U') + '&background=00a1d6&color=fff&size=160';
     document.getElementById('userName').textContent = u.nickname || u.username || '用户';
     document.getElementById('userId').textContent = 'ID: ' + (u.id || '-');
-    const vipEl = document.getElementById('userVip');
-    if (u.vip_level == 2) { vipEl.className = 'vip-badge vip-2'; vipEl.innerHTML = '<i class="fas fa-crown"></i> SVIP'; }
-    else if (u.vip_level == 1) { vipEl.className = 'vip-badge vip-1'; vipEl.innerHTML = '<i class="fas fa-crown"></i> VIP'; }
-    else { vipEl.className = 'vip-badge vip-0'; vipEl.textContent = '普通用户'; }
 
-    // VIP信息
-    loadVipInfo(u);
-}
 
 async function loadVipInfo(u) {
-    const isVip = u.vip_level > 0;
-    const tag = document.getElementById('vipTag');
-    if (u.vip_level == 2) { tag.style.background = 'linear-gradient(135deg,#ffd700,#ff8c00)'; tag.textContent = 'SVIP超级会员'; }
-    else if (u.vip_level == 1) { tag.style.background = 'linear-gradient(135deg,#f5a623,#ff6b35)'; tag.textContent = 'VIP会员'; }
     else { tag.textContent = '普通用户'; }
-    document.getElementById('vipTitle').textContent = isVip ? '我的会员' : '开通会员';
-    document.getElementById('vipLevel').textContent = u.vip_level == 2 ? 'SVIP' : (u.vip_level == 1 ? 'VIP' : '普通');
-    if (u.vip_expire_at) {
-        const expire = new Date(u.vip_expire_at);
         const now = new Date();
         const days = Math.max(0, Math.ceil((expire - now) / 86400000));
-        document.getElementById('vipExpire').textContent = u.vip_expire_at.split(' ')[0];
-        document.getElementById('vipDays').textContent = days + '天';
     } else {
-        document.getElementById('vipExpire').textContent = '未开通';
-        document.getElementById('vipDays').textContent = '-';
     }
 }
 
@@ -421,13 +408,10 @@ async function loadHistory() {
         if (items.length === 0) { grid.style.display = 'none'; empty.style.display = 'block'; return; }
         grid.style.display = 'grid'; empty.style.display = 'none';
         grid.innerHTML = items.map(v => {
-            const vip = v.vip_level == 2 ? 'badge-vip-2' : (v.vip_level == 1 ? 'badge-vip-1' : '');
-            const vipLabel = v.vip_level == 2 ? 'SVIP' : (v.vip_level == 1 ? 'VIP' : '');
             const pct = v.duration > 0 ? Math.min(100, Math.round(v.progress / v.duration * 100)) : 0;
             return `<div class="video-card" onclick="location.href='/v/${v.id}'">
                 <div class="thumb">
                     <img src="${v.cover || 'https://via.placeholder.com/400x225/667eea/fff?text=Video'}" alt="${v.title}" loading="lazy">
-                    ${vipLabel ? `<span class="badge-vip ${vip}" style="position:absolute;top:6px;left:6px;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;color:#fff;">${vipLabel}</span>` : ''}
                     <div class="progress-bar"><div class="bar" style="width:${pct}%"></div></div>
                 </div>
                 <div class="info"><h4>${v.title}</h4><div class="meta">已看${pct}% · ${new Date(v.watched_at).toLocaleDateString()}</div></div>
@@ -449,12 +433,9 @@ async function loadFavorites() {
         if (items.length === 0) { grid.style.display = 'none'; empty.style.display = 'block'; return; }
         grid.style.display = 'grid'; empty.style.display = 'none';
         grid.innerHTML = items.map(v => {
-            const vip = v.vip_level == 2 ? 'badge-vip-2' : (v.vip_level == 1 ? 'badge-vip-1' : '');
-            const vipLabel = v.vip_level == 2 ? 'SVIP' : (v.vip_level == 1 ? 'VIP' : '');
             return `<div class="video-card" onclick="location.href='/v/${v.id}'">
                 <div class="thumb">
                     <img src="${v.cover || 'https://via.placeholder.com/400x225/667eea/fff?text=Video'}" alt="${v.title}" loading="lazy">
-                    ${vipLabel ? `<span class="badge-vip ${vip}" style="position:absolute;top:6px;left:6px;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;color:#fff;">${vipLabel}</span>` : ''}
                 </div>
                 <div class="info"><h4>${v.title}</h4><div class="meta"><i class="fas fa-star" style="color:#f5a623;font-size:10px;"></i> ${v.score || '-'} · ${formatNum(v.views)}次播放</div></div>
             </div>`;
@@ -489,8 +470,141 @@ document.addEventListener('DOMContentLoaded', () => {
         loadProfile();
         loadHistory();
         loadFavorites();
+        loadShopInfo();
     }
 });
+
+// 商城相关函数
+let allPlans = [];
+
+async function loadShopInfo() {
+    try {
+        const res = await fetch(API + '/shop/my', { headers: authHeaders() });
+        const data = await res.json();
+        if (data.code !== 0) return;
+
+        const { version, orders } = data.data;
+
+        // 更新版本信息
+        document.getElementById('shopVersionLevel').textContent = version.level_text || '免费版';
+        document.getElementById('shopQuota').textContent = `${version.used_quota}/${version.total_quota}`;
+        
+        const tag = document.getElementById('shopVersionTag');
+        tag.textContent = version.level_text || '免费版';
+        if (version.is_active) {
+            tag.style.background = 'linear-gradient(135deg, #ffd700, #ff8c00)';
+        }
+
+        // 更新订单列表
+        const ordersList = document.getElementById('ordersList');
+        const ordersEmpty = document.getElementById('ordersEmpty');
+        if (orders.length === 0) {
+            ordersList.innerHTML = '';
+            ordersEmpty.style.display = 'block';
+        } else {
+            ordersEmpty.style.display = 'none';
+            ordersList.innerHTML = orders.map(o => `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
+                    <div>
+                        <div style="font-weight:600;">${o.product_name}</div>
+                        <div style="font-size:12px;color:var(--text-muted);">${o.order_no} · ${new Date(o.created_at).toLocaleString()}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-weight:600;color:var(--primary);">¥${o.amount}</div>
+                        <div style="font-size:12px;color:${o.status === 1 ? '#10b981' : '#f59e0b'};">${o.status_text}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 加载套餐列表
+        loadPlans();
+    } catch(e) { console.error('加载商城信息失败', e); }
+}
+
+async function loadPlans() {
+    try {
+        const res = await fetch(API + '/shop/plans', { headers: authHeaders() });
+        const data = await res.json();
+        if (data.code !== 0) return;
+        allPlans = data.data;
+        renderPlans(allPlans);
+    } catch(e) { console.error('加载套餐失败', e); }
+}
+
+function renderPlans(plans) {
+    const grid = document.getElementById('plansGrid');
+    grid.innerHTML = plans.map(p => `
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;">
+            ${p.badge ? `<span style="position:absolute;top:12px;right:12px;background:var(--accent);color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;">${p.badge}</span>` : ''}
+            <div style="font-weight:700;font-size:16px;margin-bottom:4px;">${p.name}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">${p.level_text} · ${p.duration_type_text}</div>
+            <div style="margin-bottom:12px;">
+                <span style="font-size:24px;font-weight:800;color:var(--accent);">¥${p.sale_price}</span>
+                <span style="font-size:13px;color:var(--text-muted);text-decoration:line-through;margin-left:8px;">¥${p.price}</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">
+                ${(p.features || []).map(f => `<div style="margin-bottom:4px;"><i class="fas fa-check" style="color:#10b981;font-size:10px;margin-right:6px;"></i>${typeof f === 'string' ? f : f}</div>`).join('')}
+            </div>
+            <button class="btn btn-primary" style="width:100%;" onclick="createOrder(${p.id}, '${p.name}', ${p.sale_price})">
+                <i class="fas fa-shopping-cart"></i> 立即购买
+            </button>
+        </div>
+    `).join('');
+}
+
+function filterPlans(level, btn) {
+    document.querySelectorAll('.setting-card .btn-outline').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filtered = level === 'all' ? allPlans : allPlans.filter(p => p.level === level);
+    renderPlans(filtered);
+}
+
+async function createOrder(planId, planName, amount) {
+    if (!confirm(`确认购买 ${planName}？\n金额：¥${amount}`)) return;
+
+    try {
+        const res = await fetch(API + '/shop/orders', {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ plan_id: planId, payment_method: 'card' })
+        });
+        const data = await res.json();
+        if (data.code === 0) {
+            toast('订单创建成功，请完成支付');
+            loadShopInfo();
+        } else {
+            toast(data.message || '创建失败', true);
+        }
+    } catch(e) { toast('网络错误', true); }
+}
+
+async function redeemCard() {
+    const cardNo = document.getElementById('redeemCardNo').value.trim();
+    const cardSecret = document.getElementById('redeemCardSecret').value.trim();
+
+    if (!cardNo || !cardSecret) {
+        toast('请输入卡号和卡密', true);
+        return;
+    }
+
+    try {
+        const res = await fetch(API + '/shop/redeem', {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ card_no: cardNo, card_secret: cardSecret })
+        });
+        const data = await res.json();
+        if (data.code === 0) {
+            toast(data.message || '兑换成功');
+            document.getElementById('redeemCardNo').value = '';
+            document.getElementById('redeemCardSecret').value = '';
+            loadShopInfo();
+        } else {
+            toast(data.message || '兑换失败', true);
+        }
+    } catch(e) { toast('网络错误', true); }
+}
 
 </script>
 

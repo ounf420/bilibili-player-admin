@@ -38,9 +38,6 @@ class NoticeController extends Controller
         if ($user) {
             $query->where(function ($q) use ($user) {
                 $q->where('target_users', 'all');
-                if ($user->vip_level > 0) {
-                    $q->orWhere('target_users', 'vip');
-                }
             });
         } else {
             $query->where('target_users', 'all');

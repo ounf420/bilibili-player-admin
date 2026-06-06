@@ -64,20 +64,6 @@ class UserForm
                     ->required()
                     ->default(1),
 
-                Select::make('vip_level')
-                    ->label('VIP等级')
-                    ->options([
-                        0 => '普通用户',
-                        1 => 'VIP会员',
-                        2 => '高级VIP',
-                        3 => '年费VIP',
-                    ])
-                    ->required()
-                    ->default(0),
-
-                DateTimePicker::make('vip_expire_at')
-                    ->label('VIP到期时间'),
-
                 TextInput::make('avatar')
                     ->label('头像URL')
                     ->maxLength(255)
@@ -114,7 +100,6 @@ class UserForm
                     ->label('最后登录IP')
                     ->disabled(),
 
-                // 第三方登录
                 TextInput::make('wechat_openid')
                     ->label('微信OpenID')
                     ->maxLength(255),

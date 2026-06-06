@@ -539,16 +539,6 @@ class AuthController extends Controller
             'status' => $user->status,
             'status_name' => $user->status == 1 ? '正常' : ($user->status == 0 ? '禁用' : '待验证'),
             'is_admin' => $user->isAdmin(),
-            'vip_level' => $user->vip_level,
-            'vip_level_name' => match ($user->vip_level) {
-                0 => '普通用户',
-                1 => 'VIP会员',
-                2 => '高级VIP',
-                3 => '年费VIP',
-                default => '未知',
-            },
-            'is_vip' => $user->vip_level > 0 && $user->vip_expire_at && $user->vip_expire_at->isFuture(),
-            'vip_expire_at' => $user->vip_expire_at,
             'gender' => $user->gender,
             'gender_name' => match ($user->gender) {
                 1 => '男',

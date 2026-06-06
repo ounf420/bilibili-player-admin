@@ -67,29 +67,6 @@ class UsersTable
                         default => '未知',
                     }),
 
-                TextColumn::make('vip_level')
-                    ->label('VIP等级')
-                    ->badge()
-                    ->color(fn (int $state): string => match ($state) {
-                        0 => 'gray',
-                        1 => 'info',
-                        2 => 'warning',
-                        3 => 'success',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn (int $state): string => match ($state) {
-                        0 => '普通用户',
-                        1 => 'VIP会员',
-                        2 => '高级VIP',
-                        3 => '年费VIP',
-                        default => '未知',
-                    }),
-
-                TextColumn::make('vip_expire_at')
-                    ->label('VIP到期')
-                    ->dateTime('Y-m-d')
-                    ->sortable(),
-
                 TextColumn::make('gender')
                     ->label('性别')
                     ->formatStateUsing(fn (int $state): string => match ($state) {
@@ -121,15 +98,6 @@ class UsersTable
                         0 => '禁用',
                         1 => '正常',
                         2 => '待验证',
-                    ]),
-
-                SelectFilter::make('vip_level')
-                    ->label('VIP等级')
-                    ->options([
-                        0 => '普通用户',
-                        1 => 'VIP会员',
-                        2 => '高级VIP',
-                        3 => '年费VIP',
                     ]),
 
                 TrashedFilter::make(),

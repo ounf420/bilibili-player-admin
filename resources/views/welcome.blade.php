@@ -179,18 +179,18 @@
         async function loadVideo(videoId) {
             try {
                 if (videoId) {
-                    const res = await fetch(`/api/videos/${videoId}`);
-                    const video = await res.json();
-                    if (video && !video.error) {
-                        initPlayer(video);
+                    const res = await fetch("/api/settings");
+                    const settings = await res.json();
+                    if (settings) {
+                        initPlayer(settings);
                         return;
                     }
                 }
                 // 默认播放第一个
-                const res = await fetch('/api/videos');
-                const videos = await res.json();
-                if (videos.length > 0) {
-                    initPlayer(videos[0]);
+                const res = await fetch('/api/settings');
+                const settings = await res.json();
+                if (settings) {
+                    initPlayer(settings);
                 }
             } catch (e) { console.error('加载视频失败:', e); }
         }

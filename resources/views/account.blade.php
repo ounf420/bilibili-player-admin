@@ -640,8 +640,8 @@
                         <div style="font-size:20px;font-weight:700;">${currentUser.nickname || currentUser.username}</div>
                         <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">ID: ${currentUser.id}</div>
                         <div style="margin-top:8px;">
-                            ${currentUser.is_vip 
-                                ? '<span style="background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;">👑 ' + currentUser.vip_level_name + '</span>'
+                            ${
+                                ? '<span style="background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;">👑 ' + 
                                 : '<span style="background:var(--border);color:var(--text-muted);padding:4px 12px;border-radius:20px;font-size:12px;">普通用户</span>'
                             }
                         </div>
@@ -828,14 +828,13 @@
                 <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
                     <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#f59e0b,#f97316);display:flex;align-items:center;justify-content:center;font-size:28px;">👑</div>
                     <div>
-                        <div style="font-size:18px;font-weight:700;">${currentUser.is_vip ? currentUser.vip_level_name : '普通用户'}</div>
+                        <div style="font-size:18px;font-weight:700;">${
                         <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">
-                            ${currentUser.is_vip ? '到期时间：' + (currentUser.vip_expire_at || '永久') : '开通VIP享受免前贴片广告等特权'}
+                            ${
                         </div>
                     </div>
                 </div>
-                <a href="/vip" class="btn btn-primary" style="width:100%;justify-content:center;">
-                    <i class="fas fa-crown"></i> ${currentUser.is_vip ? '续费/升级' : '立即开通VIP'}
+                    <i class="fas fa-crown"></i> ${
                 </a>
             </div>
         `;
@@ -934,8 +933,8 @@
         document.getElementById('drawerId').textContent = 'ID: ' + currentUser.id;
         
         const badge = document.getElementById('userBadge');
-        if (currentUser.vip_level > 0) {
-            badge.textContent = '👑 ' + currentUser.vip_level_name;
+        if (
+            badge.textContent = '👑 ' + 
             badge.style.display = 'inline-block';
         }
     }

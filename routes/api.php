@@ -31,7 +31,6 @@ Route::get('/campaigns', function () {
         ->orderBy('priority', 'desc')
         ->get();
     
-    // 映射类型
     foreach ($ads as $ad) {
         $ad->type = mapCampaignType($ad->type);
     }
@@ -57,7 +56,7 @@ Route::post('/campaigns/{id}/skip', function ($id) {
     return response()->json(['ok' => true]);
 });
 
-// 获取视频列表
+// ========== 视频加载API（播放器用）==========
 Route::get('/videos', function () {
     $videos = DB::table('videos')
         ->where('enabled', 1)
@@ -67,7 +66,6 @@ Route::get('/videos', function () {
     return response()->json($videos);
 });
 
-// 获取单个视频
 Route::get('/videos/{id}', function ($id) {
     $video = DB::table('videos')
         ->where('id', $id)
@@ -77,63 +75,25 @@ Route::get('/videos/{id}', function ($id) {
     if (!$video) {
         return response()->json(['error' => '视频不存在'], 404);
     }
+    DB::table('videos')->where('id', $id)->increment('views');
     return response()->json($video);
 });
 
-// 视频播放地址
-Route::get('/videos/{id}/play', function ($id) {
-    $video = DB::table('videos')
-        ->where('id', $id)
+Route::get('/recommend', function (\Illuminate\Http\Request $request) {
+    $limit = min((int)$request->get('limit', 12), 24);
+    $videos = DB::table('videos')
         ->where('enabled', 1)
-        ->first();
-    if (!$video) {
-        return response()->json(['error' => '视频不存在'], 404);
-    }
-
-    // VIP专属内容权限校验
-    $vipLevel = $video->vip_level ?? 0;
-    $userVipLevel = 0;
-    $userIsVip = false;
-    if ($vipLevel > 0) {
-        try {
-            $token = request()->bearerToken();
-            if ($token) {
-                $cacheKey = 'auth_token_' . md5($token);
-                $userId = \Illuminate\Support\Facades\Cache::get($cacheKey);
-                if ($userId) {
-                    $user = DB::table('users')->where('id', $userId)
-                        ->select('vip_level', 'vip_expire_at')->first();
-                    if ($user) {
-                        $userVipLevel = (int) $user->vip_level;
-                        $userIsVip = $userVipLevel > 0 && $user->vip_expire_at && strtotime($user->vip_expire_at) > time();
-                    }
-                }
-            }
-        } catch (\Exception $e) {}
-
-        if (!$userIsVip || $userVipLevel < $vipLevel) {
-            $levelNames = [1 => '黄金VIP', 2 => '钻石VIP', 3 => '星钻VIP'];
-            return response()->json([
-                'error' => 'vip_required',
-                'message' => '本片为' . ($levelNames[$vipLevel] ?? 'VIP') . '专属内容',
-                'required_vip_level' => $vipLevel,
-                'user_vip_level' => $userVipLevel,
-            ], 403);
-        }
-    }
-
-    // 增加播放次数
-    DB::table('videos')->where('id', $id)->increment('views');
-    return response()->json([
-        'success' => true,
-        'video' => $video
-    ]);
+        ->select('id', 'title', 'cover', 'category', 'score', 'views', 'duration')
+        ->orderByRaw('RAND()')
+        ->limit($limit)
+        ->get();
+    return response()->json($videos);
 });
+
 
 // ========== 认证API ==========
 use App\Http\Controllers\Api\AuthController;
 
-// 公开接口
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/send-code', [AuthController::class, 'sendVerifyCode']);
@@ -143,19 +103,16 @@ Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
 // ========== 第三方登录API ==========
 use App\Http\Controllers\Api\SocialiteController;
 
-// 公开接口
 Route::get('/socialite/login', [SocialiteController::class, 'login']);
 Route::get('/socialite/callback', [SocialiteController::class, 'callback']);
 Route::post('/socialite/login-with-temp', [SocialiteController::class, 'loginWithTemp']);
 
-// 需要登录的接口
 Route::middleware('auth.token')->group(function () {
     Route::post('/socialite/bind', [SocialiteController::class, 'bind']);
     Route::post('/socialite/unbind', [SocialiteController::class, 'unbind']);
     Route::get('/socialite/bindings', [SocialiteController::class, 'bindings']);
 });
 
-// 需要登录的接口
 Route::middleware('auth.token')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
@@ -215,79 +172,6 @@ Route::middleware('auth.token')->group(function () {
     Route::post('/notices/{id}/read', [NoticeController::class, 'markRead']);
 });
 
-// ========== 影视API ==========
-use App\Http\Controllers\Api\VideoController;
-
-Route::get('/movie/list', [VideoController::class, 'index']);
-Route::get('/movie/recommend', [VideoController::class, 'recommend']);
-Route::get('/movie/ranking', [VideoController::class, 'ranking']);
-Route::get('/movie/filters', [VideoController::class, 'filters']);
-Route::get('/movie/{id}', [VideoController::class, 'show']);
-
-// ========== 收藏API ==========
-use App\Http\Controllers\Api\FavoriteController;
-
-Route::middleware('auth.token')->group(function () {
-    Route::get('/favorites', [FavoriteController::class, 'index']);
-    Route::post('/favorites/toggle', [FavoriteController::class, 'toggle']);
-});
-Route::post('/favorites/check', [FavoriteController::class, 'check']);
-
-// ========== 观看历史API ==========
-use App\Http\Controllers\Api\WatchHistoryController;
-
-Route::middleware('auth.token')->group(function () {
-    Route::get('/history', [WatchHistoryController::class, 'index']);
-    Route::post('/history/update', [WatchHistoryController::class, 'update']);
-    Route::post('/history/clear', [WatchHistoryController::class, 'clear']);
-    Route::get('/history/progress', [WatchHistoryController::class, 'getProgress']);
-});
-
-// ========== 点赞API ==========
-use App\Http\Controllers\Api\LikeController;
-
-Route::middleware('auth.token')->group(function () {
-    Route::post('/likes/toggle', [LikeController::class, 'toggle']);
-});
-Route::post('/likes/check', [LikeController::class, 'check']);
-
-// ========== VIP API ==========
-use App\Http\Controllers\Api\VipController;
-
-Route::get('/vip/plans', [VipController::class, 'plans']);
-Route::middleware('auth.token')->group(function () {
-    Route::get('/vip/status', [VipController::class, 'status']);
-    Route::post('/vip/order', [VipController::class, 'createOrder']);
-    Route::get('/vip/orders', [VipController::class, 'orders']);
-});
-
-// 成长体系
-use App\Http\Controllers\Api\GrowthController;
-
-Route::middleware('auth.token')->group(function () {
-    Route::get('/growth/info', [GrowthController::class, 'info']);
-    Route::post('/growth/sign', [GrowthController::class, 'sign']);
-    Route::get('/growth/logs', [GrowthController::class, 'logs']);
-});
-
-// ========== 支付 API ==========
-use App\Http\Controllers\Api\AlipayController;
-use App\Http\Controllers\Api\PaymentController;
-
-// 支付宝当面付（需登录）
-Route::middleware('auth.token')->group(function () {
-    Route::post('/payment/alipay/create', [AlipayController::class, 'createOrder']);
-    Route::post('/payment/alipay/query', [AlipayController::class, 'queryOrder']);
-});
-
-// 支付宝异步通知（无需登录）
-Route::post('/payment/alipay/notify', [AlipayController::class, 'notify']);
-
-// 卡密兑换（需登录）
-Route::middleware('auth.token')->group(function () {
-    Route::post('/payment/card/redeem', [PaymentController::class, 'redeemCard']);
-});
-
 // ========== 弹幕API ==========
 Route::get('/danmaku', function (\Illuminate\Http\Request $request) {
     $videoId = $request->get('id');
@@ -300,14 +184,6 @@ Route::get('/danmaku', function (\Illuminate\Http\Request $request) {
         ->orderBy('time')
         ->get()
         ->map(function($d) {
-            // 查询弹幕用户VIP信息
-            $vipLevel = 0;
-            $userData = DB::table('users')->where('username', $d->user)
-                ->orWhere('nickname', $d->user)
-                ->select('vip_level', 'vip_expire_at')->first();
-            if ($userData && $userData->vip_level > 0 && $userData->vip_expire_at && strtotime($userData->vip_expire_at) > time()) {
-                $vipLevel = (int) $userData->vip_level;
-            }
             return [
                 'id' => $d->id,
                 'time' => (float) $d->time,
@@ -315,7 +191,6 @@ Route::get('/danmaku', function (\Illuminate\Http\Request $request) {
                 'color' => $d->color ?: '#ffffff',
                 'text' => $d->content,
                 'author' => $d->user ?: 'anonymous',
-                'vip_level' => $vipLevel,
             ];
         });
     return response()->json($list);
@@ -327,36 +202,14 @@ Route::middleware('auth.token')->post('/danmaku', function (\Illuminate\Http\Req
     if (!$vid || !$text) return response()->json(['success' => false, 'error' => '参数不完整']);
     $id = 'd' . bin2hex(random_bytes(15));
 
-    // 获取用户VIP状态
-    $userVipLevel = 0;
-    $userId = null;
-    try {
-        $token = request()->bearerToken();
-        if ($token) {
-            $cacheKey = 'auth_token_' . md5($token);
-            $userId = \Illuminate\Support\Facades\Cache::get($cacheKey);
-            if ($userId) {
-                $user = DB::table('users')->where('id', $userId)
-                    ->select('vip_level', 'vip_expire_at', 'nickname', 'username')->first();
-                if ($user && $user->vip_level > 0 && $user->vip_expire_at && strtotime($user->vip_expire_at) > time()) {
-                    $userVipLevel = (int) $user->vip_level;
-                }
-            }
-        }
-    } catch (\Exception $e) {}
-
-    // 颜色限制：非VIP只能用白色
-    $color = $request->get('color', '#ffffff');
-    $vipOnlyColors = ['#ffd700', '#ff69b4', '#00ffff', '#ff4500', '#7cfc00', '#ff1493', '#00bfff'];
-    if ($userVipLevel <= 0 && !in_array($color, ['#ffffff', '#fff'])) {
-        $color = '#ffffff'; // 非VIP强制白色
-    }
-
-    // 获取用户名
     $authorName = 'anonymous';
-    if ($userId) {
-        $user = DB::table('users')->where('id', $userId)->select('nickname', 'username')->first();
-        $authorName = $user->nickname ?: $user->username ?: 'anonymous';
+    $token = request()->bearerToken();
+    if ($token) {
+        $userId = \Illuminate\Support\Facades\Cache::get('auth_token_' . md5($token));
+        if ($userId) {
+            $user = DB::table('users')->where('id', $userId)->select('nickname', 'username')->first();
+            $authorName = $user->nickname ?: $user->username ?: 'anonymous';
+        }
     }
 
     DB::table('danmaku')->insert([
@@ -364,14 +217,14 @@ Route::middleware('auth.token')->post('/danmaku', function (\Illuminate\Http\Req
         'video_id' => $vid,
         'content' => mb_substr($text, 0, 200),
         'time' => (float) ($request->get('time', 0)),
-        'color' => $color,
+        'color' => $request->get('color', '#ffffff'),
         'type' => $request->get('type', 'scroll'),
         'user' => $authorName,
         'enabled' => 1,
         'created_at' => now(),
         'updated_at' => now(),
     ]);
-    return response()->json(['success' => true, 'id' => $id, 'vip_level' => $userVipLevel]);
+    return response()->json(['success' => true, 'id' => $id]);
 });
 
 // ========== 评论API ==========
@@ -386,13 +239,10 @@ Route::get('/comments', function (\Illuminate\Http\Request $request) {
         ->limit(50)
         ->get()
         ->map(function($c) {
-            $user = null; $vipLevel = 0;
+            $user = null;
             if ($c->user_id) {
                 $user = DB::table('users')->where('id', $c->user_id)
-                    ->select('id', 'nickname', 'username', 'avatar', 'vip_level', 'vip_expire_at')->first();
-                if ($user && $user->vip_level > 0 && $user->vip_expire_at && strtotime($user->vip_expire_at) > time()) {
-                    $vipLevel = (int) $user->vip_level;
-                }
+                    ->select('id', 'nickname', 'username', 'avatar')->first();
             }
             return [
                 'id' => $c->id,
@@ -405,8 +255,7 @@ Route::get('/comments', function (\Illuminate\Http\Request $request) {
                     'nickname' => $user->nickname ?: $user->username,
                     'username' => $user->username,
                     'avatar' => $user->avatar,
-                    'vip_level' => $vipLevel,
-                ] : ['nickname' => '匿名用户', 'vip_level' => 0],
+                ] : ['nickname' => '匿名用户'],
             ];
         });
     return response()->json(['data' => $comments]);
@@ -452,70 +301,5 @@ Route::middleware('auth.token')->post('/comments/{id}/like', function ($id) {
     return response()->json(['success' => true, 'liked' => true]);
 });
 
-// ========== 搜索建议 ==========
-
-Route::get('/search/suggest', function (\Illuminate\Http\Request $request) {
-    $q = $request->get('q', '');
-    if (mb_strlen($q) < 1) return response()->json([]);
-    $videos = DB::table('videos')
-        ->where('enabled', 1)
-        ->where(function($w) use ($q) {
-            $w->where('title', 'like', "%{$q}%")
-              ->orWhere('tags', 'like', "%{$q}%")
-              ->orWhere('actors', 'like', "%{$q}%");
-        })
-        ->select('id', 'title', 'cover', 'category', 'score', 'vip_level')
-        ->orderByDesc('views')
-        ->limit(8)
-        ->get();
-    return response()->json($videos);
-});
-
-// 记录搜索
-Route::post('/search/log', function (\Illuminate\Http\Request $request) {
-    $keyword = $request->get('q', '');
-    if (!$keyword) return response()->json(['success' => false]);
-    $userId = null;
-    try {
-        $token = request()->bearerToken();
-        if ($token) $userId = \Illuminate\Support\Facades\Cache::get('auth_token_' . md5($token));
-    } catch(\Exception $e) {}
-    DB::table('search_logs')->insert([
-        'keyword' => mb_substr($keyword, 0, 200),
-        'user_id' => $userId,
-        'created_at' => now(),
-    ]);
-    return response()->json(['success' => true]);
-});
-
-// ========== 智能推荐 ==========
-
-Route::get('/recommend', function (\Illuminate\Http\Request $request) {
-    $videoId = $request->get('video_id');
-    $limit = min((int)$request->get('limit', 12), 24);
-
-    $video = null;
-    if ($videoId) $video = DB::table('videos')->where('id', $videoId)->select('category', 'tags', 'genre')->first();
-
-    $query = DB::table('videos')->where('enabled', 1);
-    if ($videoId) $query->where('id', '!=', $videoId);
-
-    if ($video && $video->category) {
-        $query->where(function($q) use ($video) {
-            $q->where('category', $video->category);
-            if ($video->tags) {
-                $tags = explode(',', $video->tags);
-                foreach (array_slice($tags, 0, 3) as $tag) {
-                    $q->orWhere('tags', 'like', '%' . trim($tag) . '%');
-                }
-            }
-        });
-    }
-
-    $videos = $query->select('id', 'title', 'cover', 'category', 'score', 'views', 'duration', 'vip_level')
-        ->orderByRaw('RAND()')
-        ->limit($limit)
-        ->get();
-
-    return response()->json($videos);
-});
+// 引入商城API
+require __DIR__ . '/api_shop.php';

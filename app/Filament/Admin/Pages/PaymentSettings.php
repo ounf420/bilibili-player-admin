@@ -12,7 +12,7 @@ class PaymentSettings extends Page
 {
     protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedCreditCard;
     protected static ?string $navigationLabel = '支付配置';
-    protected static string | \UnitEnum | null $navigationGroup = 'VIP管理';
+    protected static string | \UnitEnum | null $navigationGroup = '系统设置';
     protected static ?int $navigationSort = 5;
     protected string $view = 'filament.admin.pages.payment-settings';
     protected static ?string $title = '支付配置';

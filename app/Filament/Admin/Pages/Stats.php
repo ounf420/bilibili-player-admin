@@ -19,10 +19,9 @@ class Stats extends Page
     public function mount(): void
     {
         $this->data = [
-            'total_videos' => DB::table('videos')->where('enabled', 1)->count(),
+            
             'total_users' => DB::table('users')->where('is_admin', 0)->count(),
-            'total_vip' => DB::table('users')->where('vip_level', '>', 0)->where('vip_expire_at', '>', now())->count(),
-            'total_views' => DB::table('videos')->sum('views'),
+            
             'total_comments' => DB::table('comments')->count(),
             'total_danmaku' => DB::table('danmaku')->count(),
             'total_ads' => DB::table('ads')->where('enabled', 1)->count(),
@@ -33,11 +32,11 @@ class Stats extends Page
                 ->orderByDesc('cnt')
                 ->limit(10)
                 ->get(),
-            'top_videos' => DB::table('videos')->where('enabled', 1)
+            'top_videos' => collect()
                 ->select('id', 'title', 'views', 'likes', 'category')
                 ->orderByDesc('views')->limit(10)->get(),
             'recent_users' => DB::table('users')->where('is_admin', 0)
-                ->select('id', 'nickname', 'username', 'vip_level', 'created_at')
+                ->select('id', 'nickname', 'username', 'created_at')
                 ->orderByDesc('id')->limit(10)->get(),
         ];
     }

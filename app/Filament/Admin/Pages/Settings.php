@@ -142,25 +142,6 @@ class Settings extends Page implements HasForms
                             ->helperText('片尾广告的连续播放时长。设为0不播。'),
                     ]),
 
-                Section::make('👑 VIP免广告控制')
-                    ->description('控制VIP用户是否跳过前贴片广告（其他广告VIP也要看）')
-                    ->schema([
-                        Toggle::make('vip_skip_ads_gold')
-                            ->label('🥇 黄金VIP免广告')
-                            ->helperText('开启后黄金VIP用户跳过前贴片广告')
-                            ->default(true),
-
-                        Toggle::make('vip_skip_ads_diamond')
-                            ->label('💎 钻石VIP免广告')
-                            ->helperText('开启后钻石VIP用户跳过前贴片广告')
-                            ->default(true),
-
-                        Toggle::make('vip_skip_ads_star')
-                            ->label('👑 星钻VIP免广告')
-                            ->helperText('开启后星钻VIP用户跳过前贴片广告')
-                            ->default(true),
-                    ]),
-
                 Section::make('✨ 外观设置')
                     ->description('自定义播放器外观')
                     ->schema([

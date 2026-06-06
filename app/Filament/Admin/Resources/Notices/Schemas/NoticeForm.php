@@ -66,7 +66,6 @@ class NoticeForm
                                     ->label('目标用户')
                                     ->options([
                                         'all' => '全部用户',
-                                        'vip' => 'VIP用户',
                                         'new' => '新用户',
                                     ])
                                     ->default('all'),
@@ -76,7 +75,7 @@ class NoticeForm
                                     ->options([
                                         'all' => '全站（不含播放器）',
                                         'home' => '首页',
-                                        'v' => '影视页',
+                                        
                                         'account' => '账号中心',
                                     ])
                                     ->default('all')

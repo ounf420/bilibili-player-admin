@@ -14,7 +14,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'username', 'email', 'phone', 'password', 'avatar', 'nickname',
-        'status', 'is_admin', 'vip_level', 'vip_expire_at', 'real_name', 'id_card',
+        'status', 'is_admin',  'real_name', 'id_card',
         'gender', 'birthday', 'wechat_openid', 'qq_openid', 'weibo_uid',
         'github_id', 'verify_code', 'verify_code_expire',
         'last_login_at', 'last_login_ip',
@@ -29,29 +29,13 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'vip_expire_at' => 'datetime',
             'birthday' => 'date',
             'verify_code_expire' => 'datetime',
             'last_login_at' => 'datetime',
         ];
     }
 
-    // VIP等级名称
-    public function getVipLevelNameAttribute(): string
-    {
-        return match($this->vip_level) {
-            1 => '白银会员',
-            2 => '黄金会员',
-            3 => '钻石会员',
-            default => '普通用户',
-        };
-    }
 
-    // 是否是VIP
-    public function getIsVipAttribute(): bool
-    {
-        return $this->vip_level > 0 && $this->vip_expire_at && $this->vip_expire_at->isFuture();
-    }
 
     // 状态名称
     public function getStatusNameAttribute(): string
