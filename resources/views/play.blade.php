@@ -121,7 +121,7 @@ function initPlayer(v) {
     if (dp) { dp.destroy(); dp = null; }
     const container = document.getElementById('dplayer');
     container.innerHTML = '';
-    let videoUrl = v.video_url || '';
+    let videoUrl = v.video_url || v.url || '';
     if (videoUrl && !videoUrl.startsWith('http')) videoUrl = window.location.origin + videoUrl;
     const isHls = videoUrl.indexOf('.m3u8') !== -1;
     const isFlv = videoUrl.indexOf('.flv') !== -1;
