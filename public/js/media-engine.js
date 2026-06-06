@@ -17,8 +17,6 @@ class MediaManager {
         this.timer = null;
         this.adsLoaded = false;
         this.onReady = null;
-        this.vipSkipAds = false; // VIP免广告标记
-        this.userVipLevel = 0;
         
         this.init();
     }
@@ -84,20 +82,10 @@ class MediaManager {
         this.countdownWrap.style.cssText = `color:rgba(255,255,255,0.85);font-size:13px;`;
         topLeft.appendChild(this.countdownWrap);
         
-        // 右上：VIP + 跳过
+        // 右上：跳过
         const topRight = document.createElement('div');
         topRight.style.cssText = 'display:flex;align-items:center;gap:8px;';
         this.topBar.appendChild(topRight);
-        
-        this.vipCloseBtn = document.createElement('button');
-        this.vipCloseBtn.style.cssText = `
-            background:linear-gradient(135deg,#f5d98e 0%,#c9a24e 100%);
-            color:#1a1a1a;border:none;padding:5px 14px;border-radius:14px;
-            font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;
-        `;
-        this.vipCloseBtn.textContent = 'VIP跳推广';
-        this.vipCloseBtn.onclick = () => this.showVipModal();
-        topRight.appendChild(this.vipCloseBtn);
         
         this.skipBtn = document.createElement('button');
         this.skipBtn.style.cssText = `
@@ -190,16 +178,8 @@ class MediaManager {
             const ads = await adsRes.json();
             this.options.ads = ads.filter(ad => ad.enabled);
             
-            // 检查VIP免广告
             const settings = await settingsRes.json();
-            this.userVipLevel = settings.user_vip_level || 0;
-            const isVip = settings.user_is_vip || false;
-            if (isVip) {
-                if (this.userVipLevel === 1 && settings.vip_skip_ads_gold) this.vipSkipAds = true;
-                if (this.userVipLevel === 2 && settings.vip_skip_ads_diamond) this.vipSkipAds = true;
-                if (this.userVipLevel === 3 && settings.vip_skip_ads_star) this.vipSkipAds = true;
-            }
-
+            
             // 前贴片时段时长
             this.options.prerollDuration = settings.preroll_duration || 120;
             // 中贴片时段时长
@@ -208,7 +188,7 @@ class MediaManager {
             this.options.postrollDuration = settings.postroll_duration || 60;
             
             this.adsLoaded = true;
-            console.log('推广加载完成:', this.options.ads.length, '条', '| VIP:', this.userVipLevel, '| 免广告:', this.vipSkipAds);
+            console.log('推广加载完成:', this.options.ads.length, '条');
             if (this.onReady) this.onReady();
         } catch (err) {
             console.error('加载推广配置失败:', err);
@@ -325,7 +305,6 @@ class MediaManager {
     }
     
     async playPreRoll() {
-        if (this.vipSkipAds) { console.log('VIP免广告：跳过前贴片'); return false; }
         return this.playAdSlot('preroll', this.options.prerollDuration || 120);
     }
 
@@ -584,20 +563,10 @@ class MediaManager {
         countdownEl.textContent = `${duration}秒`;
         topLeft.appendChild(countdownEl);
         
-        // 右侧：VIP + 跳过
+        // 右侧：跳过
         const topRight = document.createElement('div');
         topRight.style.cssText = 'display:flex;align-items:center;gap:8px;';
         topBar.appendChild(topRight);
-        
-        const vipBtn = document.createElement('button');
-        vipBtn.style.cssText = `
-            background:linear-gradient(135deg,#f5d98e 0%,#c9a24e 100%);
-            color:#1a1a1a;border:none;padding:4px 12px;border-radius:14px;
-            font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;
-        `;
-        vipBtn.textContent = 'VIP跳推广';
-        vipBtn.onclick = () => this.showVipModal();
-        topRight.appendChild(vipBtn);
         
         const skipBtn = document.createElement('button');
         skipBtn.style.cssText = `
@@ -618,21 +587,6 @@ class MediaManager {
             skipBtn.style.display = 'inline-block';
         }
         topRight.appendChild(skipBtn);
-        
-        // VIP专属关闭按钮（VIP用户可直接关闭暂停广告）
-        if (this.vipSkipAds) {
-            const vipCloseBtn = document.createElement('button');
-            vipCloseBtn.style.cssText = `
-                background:linear-gradient(135deg,#f5d98e 0%,#c9a24e 100%);
-                color:#1a1a1a;border:1px solid rgba(245,217,142,0.6);
-                padding:4px 12px;border-radius:14px;font-size:11px;font-weight:600;
-                cursor:pointer;display:inline-flex;align-items:center;gap:4px;
-                white-space:nowrap;margin-left:4px;
-            `;
-            vipCloseBtn.innerHTML = '✕ VIP关闭';
-            vipCloseBtn.onclick = () => this.endPausePromo();
-            topRight.appendChild(vipCloseBtn);
-        }
         
         // ④ 画中画小窗（原视频缩小到右下角，自适应容器大小）
         const containerW = container.offsetWidth || 600;
@@ -1001,125 +955,6 @@ class MediaManager {
         }).catch(() => {});
     }
     
-    // ========== VIP购买弹窗 ==========
-    
-    showVipModal() {
-        if (this._vipModal) return;
-        const isSmall = window.innerWidth < 480;
-
-        const modal = document.createElement('div');
-        modal.id = 'vipModalOverlay';
-        modal.style.cssText = `
-            position:fixed;top:0;left:0;width:100%;height:100%;
-            background:rgba(0,0,0,0.7);z-index:9999;
-            display:flex;align-items:center;justify-content:center;
-            animation:fadeIn 0.2s ease;overflow-y:auto;
-        `;
-
-        const card = document.createElement('div');
-        card.style.cssText = `
-            background:linear-gradient(180deg,#1a1a2e 0%,#0d0d1a 100%);
-            border:1px solid rgba(255,215,0,0.2);border-radius:${isSmall?12:16}px;
-            width:${isSmall?'92%':'480px'};max-width:480px;
-            max-height:85vh;overflow-y:auto;
-            padding:${isSmall?20:28}px;position:relative;
-            box-shadow:0 12px 50px rgba(0,0,0,0.7);
-        `;
-
-        // 关闭按钮
-        const closeBtn = document.createElement('div');
-        closeBtn.textContent = '✕';
-        closeBtn.style.cssText = `
-            position:absolute;top:${isSmall?8:12}px;right:${isSmall?10:14}px;
-            width:28px;height:28px;border-radius:50%;
-            background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);
-            display:flex;align-items:center;justify-content:center;
-            cursor:pointer;font-size:14px;transition:0.2s;
-        `;
-        closeBtn.onmouseover = () => { closeBtn.style.background='rgba(255,255,255,0.2)'; closeBtn.style.color='#fff'; };
-        closeBtn.onmouseout = () => { closeBtn.style.background='rgba(255,255,255,0.1)'; closeBtn.style.color='rgba(255,255,255,0.6)'; };
-        closeBtn.onclick = () => this.hideVipModal();
-        card.appendChild(closeBtn);
-
-        // 标题
-        card.innerHTML += `
-            <div style="text-align:center;margin-bottom:${isSmall?16:24}px;">
-                <div style="font-size:${isSmall?24:32}px;margin-bottom:8px;">👑</div>
-                <div style="font-size:${isSmall?16:20}px;font-weight:700;color:#fff;">开通VIP会员</div>
-                <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:4px;">跳过广告 · 尊享特权 · 专属内容</div>
-            </div>
-            <div id="vipPlansList" style="display:flex;flex-direction:column;gap:${isSmall?8:12}px;">
-                <div style="text-align:center;padding:30px;color:rgba(255,255,255,0.4);font-size:13px;">
-                    <i class="fas fa-spinner fa-spin" style="font-size:20px;display:block;margin-bottom:8px;"></i>
-                    加载套餐中...
-                </div>
-            </div>
-        `;
-
-        modal.appendChild(card);
-        modal.onclick = (e) => { if (e.target === modal) this.hideVipModal(); };
-        document.body.appendChild(modal);
-        this._vipModal = modal;
-
-        // 加载套餐
-        this._loadVipPlans(isSmall);
-    }
-
-    async _loadVipPlans(isSmall) {
-        try {
-            const r = await fetch('/api/vip/plans');
-            const d = await r.json();
-            const plans = d.data || d || [];
-            const list = this._vipModal?.querySelector('#vipPlansList');
-            if (!list) return;
-
-            const levelColors = {
-                1: {bg:'linear-gradient(135deg,#ffd700,#ff8c00)', text:'#1a1a1a', name:'黄金'},
-                2: {bg:'linear-gradient(135deg,#b9f2ff,#00d4ff)', text:'#000', name:'钻石'},
-                3: {bg:'linear-gradient(135deg,#e0b0ff,#8b5cf6)', text:'#fff', name:'星钻'}
-            };
-
-            if (!plans.length) {
-                list.innerHTML = '<div style="text-align:center;padding:20px;color:rgba(255,255,255,0.4);font-size:13px;">暂无可购买套餐</div>';
-                return;
-            }
-
-            list.innerHTML = plans.map(p => {
-                const lv = levelColors[p.level] || levelColors[1];
-                const hasDiscount = p.sale_price && parseFloat(p.sale_price) < parseFloat(p.price);
-                return `
-                <div style="
-                    background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
-                    border-radius:${isSmall?10:12}px;padding:${isSmall?12:16}px;
-                    display:flex;align-items:center;gap:${isSmall?10:14}px;cursor:pointer;
-                    transition:0.2s;position:relative;overflow:hidden;
-                " onclick="location.href='/vip'" onmouseover="this.style.borderColor='rgba(255,215,0,0.3)';this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)';this.style.background='rgba(255,255,255,0.04)'">
-                    <div style="
-                        background:${lv.bg};color:${lv.text};
-                        width:${isSmall?40:48}px;height:${isSmall?40:48}px;border-radius:50%;
-                        display:flex;align-items:center;justify-content:center;
-                        font-size:${isSmall?16:20}px;flex-shrink:0;
-                    ">👑</div>
-                    <div style="flex:1;min-width:0;">
-                        <div style="font-size:${isSmall?13:14}px;font-weight:600;color:#fff;">${p.name}</div>
-                        <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">${p.duration_days}天 · ${lv.name}特权</div>
-                    </div>
-                    <div style="text-align:right;flex-shrink:0;">
-                        ${hasDiscount ? `<div style="font-size:11px;color:rgba(255,255,255,0.3);text-decoration:line-through;">¥${p.price}</div>` : ''}
-                        <div style="font-size:${isSmall?16:18}px;font-weight:700;color:#ffd700;">¥${hasDiscount ? p.sale_price : p.price}</div>
-                    </div>
-                </div>`;
-            }).join('');
-        } catch(e) {
-            const list = this._vipModal?.querySelector('#vipPlansList');
-            if (list) list.innerHTML = '<div style="text-align:center;padding:20px;color:rgba(255,255,255,0.4);">加载失败，请稍后重试</div>';
-        }
-    }
-
-    hideVipModal() {
-        if (this._vipModal) { this._vipModal.remove(); this._vipModal = null; }
-    }
-
     // 销毁
     destroy() {
         if (this.timer) clearInterval(this.timer);
@@ -1128,7 +963,6 @@ class MediaManager {
         if (this._pauseAdVideo) this._pauseAdVideo.pause();
         if (this._pausePipVideo) this._pausePipVideo.pause();
         if (this.pauseOverlay) this.pauseOverlay.remove();
-        if (this._vipModal) this._vipModal.remove();
         if (this.overlay) this.overlay.remove();
         this.isAdPlaying = false;
         this.currentAd = null;
