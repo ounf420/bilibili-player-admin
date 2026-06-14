@@ -1,58 +1,139 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🎬 视频播放器管理系统
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+一套完整的视频播放器广告管理平台，支持多格式视频播放、智能广告投放、用户管理与数据分析。
 
-## About Laravel
+## ✨ 功能特点
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### 🎥 播放器功能
+- 支持 HLS (m3u8)、MP4、FLV 等多种视频格式
+- 标准版 + 优酷风格两套播放器模板
+- 弹幕系统、倍速播放、音量控制
+- 选集面板、记忆播放、自动播放
+- 全屏模式自动隐藏控制栏
+- Logo水印、文字水印自定义
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 📺 广告系统
+- 17种广告类型：开屏、前贴片、中贴片、后贴片、暂停、角标、跑马灯等
+- 平台广告 + 用户广告双层控制
+- 广告素材管理、投放时间控制
+- 去广告功能（需购买）
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 👤 用户系统
+- 用户注册/登录
+- 用户中心（播放器管理、广告管理）
+- 卡密充值系统
+- 播放器额度管理
 
-## Learning Laravel
+### 🔧 后台管理
+- Filament 后台管理系统
+- 用户管理、视频管理、广告管理
+- 卡密管理、订单管理
+- 系统设置、数据统计
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 🚀 快速安装
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 环境要求
+- PHP >= 8.1
+- MySQL >= 5.7
+- PHP扩展：openssl, pdo, mbstring, tokenizer, xml, ctype, json, bcmath, fileinfo, curl
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+### 安装步骤
 
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
+1. **下载项目**
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone https://github.com/ounf420/bilibili-player-admin.git
+cd bilibili-player-admin
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+2. **安装依赖**
+```bash
+composer install --no-dev --optimize-autoloader
+```
 
-## Contributing
+3. **设置目录权限**
+```bash
+chmod -R 755 storage/
+chmod -R 755 bootstrap/cache/
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+4. **访问安装向导**
 
-## Code of Conduct
+在浏览器中访问你的域名，系统会自动跳转到安装向导：
+```
+http://你的域名/install
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+按照向导完成：
+- 环境检测
+- 数据库配置
+- 管理员账号设置
+- 一键安装
 
-## Security Vulnerabilities
+## 📦 开箱即用安装包
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+下载 `bilibili-player-admin-v1.0.zip`，无需运行 composer install，上传解压后直接访问安装向导。
 
-## License
+## 🎮 使用说明
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### 播放器访问
+- 标准播放器：`/player`
+- 优酷风格播放器：`/youku/player/{slug}`
+- 嵌入播放器：`/embed/player/{slug}?pid=xxx&pkey=xxx`
+
+### 后台管理
+- 访问：`/admin`
+- 默认管理员：安装时设置的账号
+
+### 用户中心
+- 访问：`/user`
+- 用户注册：`/register`
+
+## 📁 项目结构
+
+```
+bilibili-player-admin/
+├── app/
+│   ├── Http/Controllers/    # 控制器
+│   ├── Models/              # 数据模型
+│   ├── Services/            # 服务层
+│   └── Filament/            # 后台管理
+├── resources/
+│   └── views/               # 视图模板
+├── public/                  # 公共资源
+├── database/                # 数据库迁移
+├── routes/                  # 路由定义
+└── storage/                 # 存储目录
+```
+
+## 🔧 技术栈
+
+- **后端**：Laravel 12 + PHP 8.1+
+- **后台**：Filament v5
+- **前端**：原生JS + DPlayer + HLS.js
+- **数据库**：MySQL 5.7+
+- **UI框架**：Tailwind CSS + Remix Icon
+
+## 📝 更新日志
+
+### v1.0.0 (2026-06-14)
+- ✅ 完整的视频播放器系统
+- ✅ 17种广告类型支持
+- ✅ 用户注册/登录系统
+- ✅ 卡密充值系统
+- ✅ 后台管理系统
+- ✅ 在线安装向导
+- ✅ 优酷风格播放器模板
+- ✅ 全屏模式自动隐藏控制栏
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 📄 许可证
+
+MIT License
+
+## 🔗 相关链接
+
+- [GitHub仓库](https://github.com/ounf420/bilibili-player-admin)
+- [问题反馈](https://github.com/ounf420/bilibili-player-admin/issues)
