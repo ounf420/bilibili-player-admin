@@ -11,7 +11,7 @@ class Notice extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'title', 'content', 'type', 'status', 'is_top', 'is_popup',
+        'title', 'content', 'summary', 'type', 'status', 'is_top', 'is_popup',
         'is_marquee', 'bg_color', 'icon', 'target_users', 'position', 'read_count',
         'published_at', 'expires_at', 'sort_order',
     ];

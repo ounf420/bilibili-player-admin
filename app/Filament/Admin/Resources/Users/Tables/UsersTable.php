@@ -2,7 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Users\Tables;
 
-use Filament\Actions\BulkActionGroup;
+
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
@@ -106,11 +106,9 @@ class UsersTable
                 EditAction::make(),
             ])
             ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                                    DeleteBulkAction::make(),
                     ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),
-                ]),
             ]);
     }
 }

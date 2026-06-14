@@ -152,4 +152,24 @@ class NoticeController extends Controller
             'data' => $notice,
         ]);
     }
+
+    /**
+     * 获取公告列表（用户中心用）
+     * GET /api/notices/list
+     */
+    public function list(Request $request)
+    {
+        $limit = min($request->input('limit', 50), 100);
+
+        $notices = Notice::active()
+            ->orderByTop()
+            ->orderBy('published_at', 'desc')
+            ->limit($limit)
+            ->get(['id', 'title', 'type', 'summary', 'icon', 'bg_color', 'published_at', 'created_at']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $notices,
+        ]);
+    }
 }

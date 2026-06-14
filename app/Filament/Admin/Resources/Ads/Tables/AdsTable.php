@@ -2,7 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Ads\Tables;
 
-use Filament\Actions\BulkActionGroup;
+
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
@@ -90,6 +90,11 @@ class AdsTable
                     ->label('跳过')
                     ->boolean(),
 
+                TextColumn::make('decoration.name')
+                    ->label('装饰方案')
+                    ->placeholder('默认')
+                    ->sortable(),
+
                 IconColumn::make('enabled')
                     ->label('启用')
                     ->boolean(),
@@ -146,9 +151,7 @@ class AdsTable
                 EditAction::make(),
             ])
             ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+                \Filament\Actions\DeleteBulkAction::make(),
             ]);
     }
 }

@@ -298,7 +298,7 @@
                     localStorage.setItem('token', data.data.token);
                     localStorage.setItem('user', JSON.stringify(data.data.user));
                     showToast('注册成功，正在跳转...');
-                    setTimeout(() => window.location.href = '/account', 1000);
+                    setTimeout(() => window.location.href = '/user', 1000);
                 } else {
                     showToast(data.message || '注册失败', 'error');
                 }

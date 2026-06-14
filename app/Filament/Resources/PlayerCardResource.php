@@ -157,13 +157,11 @@ class PlayerCardResource extends Resource
                     ->action(fn (PlayerCard $record) => $record->update(['status' => PlayerCard::STATUS_UNUSED])),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\BulkAction::make('batchDisable')
-                        ->label('批量禁用')
-                        ->icon('heroicon-o-lock-closed')
-                        ->action(fn ($records) => $records->each->update(['status' => PlayerCard::STATUS_DISABLED])),
-                ]),
+                \Filament\Actions\DeleteBulkAction::make(),
+                \Filament\Actions\BulkAction::make('batchDisable')
+                    ->label('批量禁用')
+                    ->icon('heroicon-o-lock-closed')
+                    ->action(fn ($records) => $records->each->update(['status' => PlayerCard::STATUS_DISABLED])),
             ]);
     }
 

@@ -22,7 +22,10 @@ class SocialiteController extends Controller
         $this->apiUrl = config('services.socialite.api_url', 'https://login.cxavn.cn') . '/connect.php';
         $this->appId = config('services.socialite.appid');
         $this->appKey = config('services.socialite.appkey');
-        $this->callbackUrl = config('services.socialite.callback');
+        // 自动识别HTTP/HTTPS，跟随当前请求协议
+        $callback = config('services.socialite.callback');
+        $callback = preg_replace('#^https?://#', request()->getScheme() . '://', $callback);
+        $this->callbackUrl = $callback;
     }
 
     /**
@@ -76,35 +79,58 @@ class SocialiteController extends Controller
         $type = $request->input('type');
         $state = $request->input('state');
 
+        // 调试日志
+        \Illuminate\Support\Facades\Log::info('Socialite callback', [
+            'code' => $code,
+            'type' => $type,
+            'state' => $state,
+            'platform' => $platform ?? null,
+            'url' => $request->fullUrl(),
+        ]);
+
         if (!$code) {
+            // 返回JSON而非HTML，让login.cxavn.cn验证URL时能正常识别
+            if (!$state && !$type) {
+                return response()->json(['success' => true, 'message' => 'callback ready']);
+            }
             return $this->callbackError('缺少授权码');
         }
 
-        // 验证state
-        $stateKey = 'socialite_state_' . $state;
-        $cachedType = Cache::get($stateKey);
-        if (!$cachedType) {
-            return $this->callbackError('授权已过期，请重试');
+        // 验证state（login.cxavn.cn可能不会原样传回state，所以做容错处理）
+        $platform = $type ?: 'qq';
+        if ($state) {
+            $stateKey = 'socialite_state_' . $state;
+            $cachedType = Cache::get($stateKey);
+            if ($cachedType) {
+                $platform = $cachedType;
+                Cache::forget($stateKey);
+            }
         }
-        Cache::forget($stateKey);
 
         // 用code换取用户信息
         $params = [
             'act' => 'callback',
             'appid' => $this->appId,
             'appkey' => $this->appKey,
+            'type' => $platform,
             'code' => $code,
         ];
 
         $response = Http::timeout(10)->get($this->apiUrl, $params);
         $data = $response->json();
 
+        \Illuminate\Support\Facades\Log::info('Socialite API response', [
+            'params' => $params,
+            'response' => $data,
+            'status' => $response->status(),
+        ]);
+
         if (!isset($data['code']) || $data['code'] != 0) {
+            \Illuminate\Support\Facades\Log::error('Socialite callback failed', ['data' => $data]);
             return $this->callbackError($data['msg'] ?? '登录失败');
         }
 
         $socialUid = $data['social_uid'];
-        $platform = $type ?? $cachedType;
 
         // 查找是否已有绑定
         $account = SocialAccount::where('platform', $platform)
@@ -171,7 +197,7 @@ class SocialiteController extends Controller
             return response()->json(['success' => false, 'message' => '请先登录'], 401);
         }
 
-        $tempData = Cache::get('socialite_temp_' . $request->temp_key);
+        $tempData = Cache::get($request->temp_key);
         if (!$tempData) {
             return response()->json(['success' => false, 'message' => '授权已过期，请重试'], 400);
         }
@@ -223,7 +249,7 @@ class SocialiteController extends Controller
             'temp_key' => 'required|string',
         ]);
 
-        $tempData = Cache::get('socialite_temp_' . $request->temp_key);
+        $tempData = Cache::get($request->temp_key);
         if (!$tempData) {
             return response()->json(['success' => false, 'message' => '授权已过期，请重试'], 400);
         }

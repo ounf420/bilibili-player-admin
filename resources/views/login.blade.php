@@ -242,7 +242,7 @@
                     localStorage.setItem('token', data.data.token);
                     localStorage.setItem('user', JSON.stringify(data.data.user));
                     showToast('登录成功，正在跳转...');
-                    setTimeout(() => window.location.href = '/account', 1000);
+                    setTimeout(() => window.location.href = '/user', 1000);
                 } else {
                     showToast(data.message || '登录失败', 'error');
                 }
@@ -303,7 +303,7 @@
                                     localStorage.setItem('token', loginData.data.token);
                                     localStorage.setItem('user', JSON.stringify(loginData.data.user));
                                     showToast('登录成功，正在跳转...');
-                                    setTimeout(() => window.location.href = '/account', 1000);
+                                    setTimeout(() => window.location.href = '/user', 1000);
                                 } else {
                                     showToast(loginData.message || '登录失败', 'error');
                                 }
@@ -312,7 +312,7 @@
                                 localStorage.setItem('token', e.data.token);
                                 localStorage.setItem('user', JSON.stringify(e.data.user));
                                 showToast('登录成功，正在跳转...');
-                                setTimeout(() => window.location.href = '/account', 1000);
+                                setTimeout(() => window.location.href = '/user', 1000);
                             } else {
                                 showToast(e.data.message || '登录失败', 'error');
                             }

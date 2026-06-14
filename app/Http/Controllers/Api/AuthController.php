@@ -51,6 +51,17 @@ class AuthController extends Controller
         // 刷新获取数据库默认值
         $user->refresh();
 
+        // 赠送免费播放器额度
+        $defaultQuota = \Illuminate\Support\Facades\Cache::get('player_default_quota', 1);
+        if ($defaultQuota > 0) {
+            \App\Models\PlayerQuota::create([
+                'user_id' => $user->id,
+                'total_quota' => $defaultQuota,
+                'used_quota' => 0,
+                'bonus_quota' => $defaultQuota,
+            ]);
+        }
+
         // 自动登录
         $token = $this->generateToken($user);
         
@@ -518,7 +529,7 @@ class AuthController extends Controller
     }
 
     // 生成Token
-    private function generateToken(User $user): string
+    public function generateToken(User $user): string
     {
         $token = Str::random(60);
         Cache::put('token_' . $token, $user->id, 60 * 24 * 30); // 30天
@@ -527,7 +538,7 @@ class AuthController extends Controller
     }
 
     // 格式化用户数据
-    private function formatUser(User $user): array
+    public function formatUser(User $user): array
     {
         return [
             'id' => $user->id,

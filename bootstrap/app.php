@@ -17,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth.token' => \App\Http\Middleware\AuthToken::class,
         ]);
+        $middleware->validateCsrfTokens(except: [
+            'api/video/*',
+        ]);
+        $middleware->append(\App\Http\Middleware\CheckInstalled::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

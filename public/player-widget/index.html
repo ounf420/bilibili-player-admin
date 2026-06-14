@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频播放器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e; color: #fff;
+            min-height: 100vh; display: flex; flex-direction: column;
+            align-items: center; padding: 20px;
+        }
+        .container { width: 100%; max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 20px; font-size: 24px; color: #ff6b00; }
+        
+        .url-input-section {
+            background: #16213e; border-radius: 12px; padding: 20px;
+            margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,.3);
+        }
+        .url-input-section h2 { font-size: 18px; margin-bottom: 15px; color: #e2e8f0; }
+        .input-group { display: flex; gap: 10px; }
+        .input-group input {
+            flex: 1; padding: 12px 16px; border: 2px solid #2d3748;
+            border-radius: 8px; background: #1a202c; color: #fff; font-size: 14px;
+        }
+        .input-group input:focus { outline: none; border-color: #ff6b00; }
+        .input-group input::placeholder { color: #718096; }
+        .play-btn {
+            padding: 12px 24px; background: linear-gradient(135deg, #ff6b00, #ff8533);
+            color: #fff; border: none; border-radius: 8px; font-size: 14px;
+            font-weight: 600; cursor: pointer; white-space: nowrap;
+        }
+        .play-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(255,107,0,.4); }
+        
+        .player-wrapper {
+            position: relative; width: 100%; background: #000;
+            border-radius: 12px; overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0,0,0,.5);
+        }
+        .player-container {
+            width: 100%; height: 0; padding-bottom: 56.25%; position: relative;
+        }
+        .player-container iframe {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;
+        }
+        
+        .info-section {
+            background: #16213e; border-radius: 12px; padding: 20px;
+            margin-top: 20px; box-shadow: 0 4px 20px rgba(0,0,0,.3);
+        }
+        .info-section h2 { font-size: 18px; margin-bottom: 15px; color: #e2e8f0; }
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .info-item {
+            background: #1a202c; padding: 15px; border-radius: 8px;
+            border-left: 4px solid #ff6b00;
+        }
+        .info-item label { font-size: 12px; color: #718096; text-transform: uppercase; letter-spacing: 1px; }
+        .info-item .value { font-size: 16px; font-weight: 600; color: #fff; margin-top: 5px; word-break: break-all; }
+        
+        .footer { text-align: center; margin-top: 30px; padding: 20px; color: #718096; font-size: 12px; }
+        
+        .error-message {
+            background: #e53e3e; color: #fff; padding: 15px; border-radius: 8px;
+            margin-bottom: 20px; display: none;
+        }
+        
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h1 { font-size: 20px; }
+            .input-group { flex-direction: column; }
+            .play-btn { width: 100%; }
+            .info-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 视频播放器</h1>
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <!-- URL输入 -->
+        <div class="url-input-section">
+            <h2>📺 播放视频</h2>
+            <div class="input-group">
+                <input type="text" id="videoUrl" placeholder="输入视频地址（支持MP4、M3U8等格式）" />
+                <button class="play-btn" onclick="playVideo()">立即播放</button>
+            </div>
+        </div>
+        
+        <!-- 播放器 -->
+        <div class="player-wrapper">
+            <div class="player-container" id="playerContainer"></div>
+        </div>
+        
+        <!-- 配置信息 -->
+        <div class="info-section">
+            <h2>⚙️ 配置信息</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>播放器ID</label>
+                    <div class="value" id="displayPlayerId">-</div>
+                </div>
+                <div class="info-item">
+                    <label>播放器站点</label>
+                    <div class="value" id="displaySiteUrl">-</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Powered by Video Player System</p>
+            <p>配置文件：config.js</p>
+        </div>
+    </div>
+    
+    <script src="config.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                if (typeof PLAYER_CONFIG === 'undefined') {
+                    showError('配置文件未加载，请检查 config.js 文件');
+                    return;
+                }
+                if (!PLAYER_CONFIG.site_url || !PLAYER_CONFIG.player_id || !PLAYER_CONFIG.player_key) {
+                    showError('请先修改 config.js，填入播放器站点、ID和密钥');
+                    return;
+                }
+                document.getElementById('displayPlayerId').textContent = PLAYER_CONFIG.player_id;
+                document.getElementById('displaySiteUrl').textContent = PLAYER_CONFIG.site_url;
+                showEmptyPlayer();
+            } catch (e) {
+                showError('初始化失败：' + e.message);
+            }
+        });
+        
+        function playVideo() {
+            var url = document.getElementById('videoUrl').value.trim();
+            if (!url) { showError('请输入视频地址'); return; }
+            loadPlayer(url);
+        }
+        
+        function loadPlayer(videoUrl) {
+            var c = PLAYER_CONFIG;
+            var base = c.site_url.replace(/\/$/, '');
+            var src = base + '/embed/player/' + c.player_id
+                + '?pid=' + c.player_id
+                + '&pkey=' + c.player_key
+                + '&url=' + encodeURIComponent(videoUrl);
+            document.getElementById('playerContainer').innerHTML =
+                '<iframe src="' + src + '" allowfullscreen allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"></iframe>';
+            hideError();
+        }
+        
+        function showEmptyPlayer() {
+            document.getElementById('playerContainer').innerHTML =
+                '<div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a1a2e,#16213e);color:#718096;font-size:18px;text-align:center;padding:20px;">'
+                + '<div><div style="font-size:48px;margin-bottom:20px;">📺</div>'
+                + '<div>请输入视频地址开始播放</div>'
+                + '<div style="font-size:14px;margin-top:10px;color:#4a5568;">支持 MP4、M3U8、FLV 等格式</div></div></div>';
+        }
+        
+        function showError(msg) {
+            var el = document.getElementById('errorMessage');
+            el.textContent = msg; el.style.display = 'block';
+            setTimeout(function() { hideError(); }, 5000);
+        }
+        function hideError() { document.getElementById('errorMessage').style.display = 'none'; }
+        
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && document.activeElement.id === 'videoUrl') playVideo();
+        });
+    </script>
+</body>
+</html>

@@ -59,33 +59,33 @@ class MediaManager {
         this.topBar = document.createElement('div');
         this.topBar.style.cssText = `
             position:absolute;top:0;left:0;width:100%;
-            padding:12px 20px;display:flex;justify-content:space-between;align-items:center;
+            padding:96px 20px 40px;display:flex;justify-content:space-between;align-items:center;
             z-index:201;background:linear-gradient(180deg,rgba(0,0,0,0.6) 0%,transparent 100%);
             box-sizing:border-box;
         `;
         this.overlay.appendChild(this.topBar);
         
-        // 左上：推广标签 + 倒计时
+        // 左上：推广标签
         const topLeft = document.createElement('div');
-        topLeft.style.cssText = 'display:flex;align-items:center;gap:12px;';
+        topLeft.style.cssText = 'display:flex;align-items:center;gap:12px;padding-left:20px;';
         this.topBar.appendChild(topLeft);
         
         this.promoBadge = document.createElement('div');
         this.promoBadge.style.cssText = `
             background:rgba(255,255,255,0.15);color:#fff;
-            padding:5px 12px;border-radius:4px;font-size:12px;letter-spacing:1px;
+            padding:8px 16px;border-radius:6px;font-size:16px;letter-spacing:1px;
         `;
         this.promoBadge.textContent = '推广';
         topLeft.appendChild(this.promoBadge);
         
-        this.countdownWrap = document.createElement('div');
-        this.countdownWrap.style.cssText = `color:rgba(255,255,255,0.85);font-size:13px;`;
-        topLeft.appendChild(this.countdownWrap);
-        
-        // 右上：跳过
+        // 右上：跳过 + 倒计时
         const topRight = document.createElement('div');
-        topRight.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        topRight.style.cssText = 'display:flex;align-items:center;gap:12px;padding-right:20px;';
         this.topBar.appendChild(topRight);
+        
+        this.countdownWrap = document.createElement('div');
+        this.countdownWrap.style.cssText = `color:rgba(255,255,255,0.85);font-size:16px;`;
+        topRight.appendChild(this.countdownWrap);
         
         this.skipBtn = document.createElement('button');
         this.skipBtn.style.cssText = `
@@ -128,6 +128,8 @@ class MediaManager {
         this.brandInfo.appendChild(this.brandName);
         
         this.ctaBtn = document.createElement('a');
+        this.ctaBtn.target = '_blank';
+        this.ctaBtn.rel = 'noopener noreferrer';
         this.ctaBtn.style.cssText = `
             background:linear-gradient(135deg,#00c853 0%,#00a040 100%);
             color:#fff;padding:8px 22px;border-radius:16px;text-decoration:none;
@@ -153,6 +155,19 @@ class MediaManager {
         `;
         this.progressBar.appendChild(this.progressFill);
         
+        // 进度条跟随图标（类似爱奇艺角色效果）
+        this.progressIcon = document.createElement('div');
+        this.progressIcon.style.cssText = `
+            position:absolute;bottom:2px;left:0;
+            width:28px;height:28px;
+            transform:translateX(-50%);
+            z-index:202;display:none;
+            pointer-events:none;
+            transition:left 1s linear;
+        `;
+        this.progressIcon.innerHTML = `<img style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.5));" />`;
+        this.overlay.appendChild(this.progressIcon);
+        
         // 推广视频事件
         this.promoVideo.addEventListener('ended', () => this.endAd());
         this.promoVideo.addEventListener('error', (e) => {
@@ -160,8 +175,8 @@ class MediaManager {
             this.endAd();
         });
         this.promoVideo.addEventListener('click', () => {
-            if (this.currentAd && this.currentAd.clickUrl) {
-                window.open(this.currentAd.clickUrl, '_blank');
+            if (this.currentAd && this.currentAd.click_url) {
+                window.open(this.currentAd.click_url, '_blank');
                 this.trackEvent('click');
             }
         });
@@ -170,25 +185,88 @@ class MediaManager {
     // 加载推广配置
     async loadCampaigns() {
         try {
-            // 同时加载广告和设置（含VIP状态）
-            const [adsRes, settingsRes] = await Promise.all([
+            const adMode = this.options.adMode || 'platform';
+            
+            // 根据广告模式决定数据来源
+            if (adMode === 'user') {
+                // 用户广告模式：用户素材优先，没有对应位置则用平台广告兜底
+                const userAds = (this.options.ads || []).map(ad => ({...ad, _source: 'user'}));
+                try {
+                    const [platformRes, settingsRes, decorationsRes] = await Promise.all([
+                        fetch('/api/campaigns'),
+                        fetch('/api/settings'),
+                        fetch('/api/decorations')
+                    ]);
+                    const platformAds = (await platformRes.json())
+                        .filter(ad => ad.enabled)
+                        .map(ad => ({...ad, _source: 'platform'}));
+                    
+                    // 检查用户素材覆盖了哪些位置
+                    const userPositions = new Set(userAds.map(ad => ad.position || ad.type));
+                    // 只保留用户没有覆盖的位置 + 开屏广告
+                    const fallbackAds = platformAds.filter(ad => {
+                        const pos = ad.position || ad.type;
+                        return pos === 'splash' || !userPositions.has(pos);
+                    });
+                    
+                    this.options.ads = [...userAds, ...fallbackAds];
+                    
+                    const settings = await settingsRes.json();
+                    // 播放器自定义时段优先，否则用平台设置
+                    this.options.prerollDuration = this.options.prerollDuration || settings.preroll_duration || 120;
+                    this.options.midrollDuration = this.options.midrollDuration || settings.midroll_duration || 60;
+                    this.options.postrollDuration = this.options.postrollDuration || settings.postroll_duration || 60;
+                    
+                    const decorations = await decorationsRes.json();
+                    this.decorationsMap = {};
+                    decorations.forEach(d => this.decorationsMap[d.id] = d);
+                    
+                    console.log('[广告] 用户广告模式，用户素材:', userAds.length, '条，平台兜底:', fallbackAds.length, '条');
+                } catch(e) {
+                    this.options.ads = userAds;
+                    this.decorationsMap = {};
+                    console.log('[广告] 用户广告模式，平台加载失败，仅用用户素材');
+                }
+                
+                this.adsLoaded = true;
+                if (this.onReady) this.onReady();
+                return;
+            }
+            
+            // 加载平台广告和设置
+            const [adsRes, settingsRes, decorationsRes] = await Promise.all([
                 fetch('/api/campaigns'),
-                fetch('/api/settings')
+                fetch('/api/settings'),
+                fetch('/api/decorations')
             ]);
-            const ads = await adsRes.json();
-            this.options.ads = ads.filter(ad => ad.enabled);
+            const platformAds = await adsRes.json();
             
             const settings = await settingsRes.json();
             
-            // 前贴片时段时长
-            this.options.prerollDuration = settings.preroll_duration || 120;
-            // 中贴片时段时长
-            this.options.midrollDuration = settings.midroll_duration || 60;
-            // 后贴片时段时长
-            this.options.postrollDuration = settings.postroll_duration || 60;
+            // 加载装饰方案
+            const decorations = await decorationsRes.json();
+            this.decorationsMap = {};
+            decorations.forEach(d => this.decorationsMap[d.id] = d);
+            console.log('装饰方案加载完成:', decorations.length, '个');
+            
+            // 播放器自定义时段优先，否则用平台设置
+            this.options.prerollDuration = this.options.prerollDuration || settings.preroll_duration || 120;
+            this.options.midrollDuration = this.options.midrollDuration || settings.midroll_duration || 60;
+            this.options.postrollDuration = this.options.postrollDuration || settings.postroll_duration || 60;
+            
+            if (adMode === 'mixed') {
+                // 混合模式：用户素材 + 平台广告
+                const userAds = this.options.ads || [];
+                const enabledPlatformAds = platformAds.filter(ad => ad.enabled);
+                this.options.ads = [...userAds, ...enabledPlatformAds];
+                console.log('[广告] 混合模式，用户素材:', userAds.length, '条，平台广告:', enabledPlatformAds.length, '条');
+            } else {
+                // 平台广告模式
+                this.options.ads = platformAds.filter(ad => ad.enabled);
+                console.log('[广告] 平台广告模式:', this.options.ads.length, '条');
+            }
             
             this.adsLoaded = true;
-            console.log('推广加载完成:', this.options.ads.length, '条');
             if (this.onReady) this.onReady();
         } catch (err) {
             console.error('加载推广配置失败:', err);
@@ -212,9 +290,10 @@ class MediaManager {
      * @returns {object|null} - 推广对象或null
      */
     pickRandomAd(type) {
-        const candidates = this.options.ads.filter(ad => ad.type === type && ad.enabled);
+        const candidates = this.options.ads.filter(ad => ad.enabled && (
+            ad.type === type || ad.type?.startsWith(type + '_') || ad.position === type
+        ));
         if (candidates.length === 0) return null;
-        // 只有一条就直接返回，多条随机抽
         const idx = Math.floor(Math.random() * candidates.length);
         return candidates[idx];
     }
@@ -229,21 +308,20 @@ class MediaManager {
      */
     pickAdsForSlot(type, slotDuration) {
         const allAds = this.options.ads
-            .filter(ad => ad.type === type && ad.enabled)
+            .filter(ad => ad.enabled && (ad.type === type || ad.type?.startsWith(type + '_') || ad.position === type))
             .sort((a, b) => (b.priority || 0) - (a.priority || 0));
         if (allAds.length === 0) return [];
-        const maxDuration = slotDuration * 1.5;
+        // 每次从同类广告中随机选一条（不重复顺序轮播）
         const selected = [];
-        let totalDur = 0, roundIdx = 0;
-        while (totalDur < slotDuration) {
-            const ad = allAds[roundIdx % allAds.length];
-            if (!ad) break;
+        let totalDur = 0;
+        const maxDuration = slotDuration * 1.5;
+        const shuffled = [...allAds].sort(() => Math.random() - 0.5);
+        for (const ad of shuffled) {
             const adDur = ad.duration || 15;
             if (totalDur + adDur > maxDuration && selected.length > 0) break;
             selected.push(ad);
             totalDur += adDur;
-            roundIdx++;
-            if (selected.length >= 20) break;
+            if (totalDur >= slotDuration) break;
         }
         return selected;
     }
@@ -271,6 +349,7 @@ class MediaManager {
                 if (slotTimer) { clearTimeout(slotTimer); slotTimer = null; }
                 if (currentAdTimer) { clearInterval(currentAdTimer); currentAdTimer = null; }
                 if (this.timer) { clearInterval(this.timer); this.timer = null; }
+                if (this._adSafetyTimeout) { clearTimeout(this._adSafetyTimeout); this._adSafetyTimeout = null; }
                 this.promoVideo.pause(); this.promoVideo.src = '';
                 this.overlay.style.display = 'none'; this.progressBar.style.display = 'none';
                 this.isAdPlaying = false; this.currentAd = null; this._onAdComplete = null; this._inAdSlot = false;
@@ -287,13 +366,34 @@ class MediaManager {
                     else { cleanupAndFinish(); return; }
                 }
                 const ad = ads[currentIndex]; const adDur = ad.duration || 15;
-                this.promoBadge.textContent = `广告 ${currentIndex + 1}/${ads.length}`;
+                const badgeText = ad.badge_text || '广告';
+                this.promoBadge.textContent = `${badgeText} ${currentIndex + 1}/${ads.length}`;
+                if (ad.badge_color) this.promoBadge.style.background = ad.badge_color;
+                if (ad.progress_color) this.progressFill.style.background = ad.progress_color;
+                
+                // 清理上一条广告的定时器
+                if (this.timer) { clearInterval(this.timer); this.timer = null; }
+                if (this._adSafetyTimeout) { clearTimeout(this._adSafetyTimeout); this._adSafetyTimeout = null; }
+                
                 this._onAdComplete = () => {
+                    if (this._adSafetyTimeout) { clearTimeout(this._adSafetyTimeout); this._adSafetyTimeout = null; }
                     elapsed += adDur; currentIndex++;
                     if (currentAdTimer) { clearInterval(currentAdTimer); currentAdTimer = null; }
                     if (elapsed >= slotDuration) cleanupAndFinish(); else playNext();
                 };
+                
                 this.showAd(ad);
+                
+                // 安全超时：如果广告视频ended/error都没触发，强制跳过（防止卡死）
+                this._adSafetyTimeout = setTimeout(() => {
+                    console.warn('广告安全超时，强制跳过:', ad.name);
+                    if (this._onAdComplete) {
+                        const cb = this._onAdComplete;
+                        this._onAdComplete = null;
+                        cb();
+                    }
+                }, (adDur + 10) * 1000);
+                
                 const remainTotal = Math.max(0, slotDuration - elapsed);
                 this.countdownWrap.textContent = `剩余${remainTotal}秒`;
                 if (currentAdTimer) clearInterval(currentAdTimer);
@@ -305,7 +405,15 @@ class MediaManager {
     }
     
     async playPreRoll() {
-        return this.playAdSlot('preroll', this.options.prerollDuration || 120);
+        const slotDur = this.options.prerollDuration || 0;
+        if (slotDur > 0) {
+            // 设了时段：随机抽取素材填充
+            return this.playAdSlot('preroll', slotDur);
+        }
+        // 没设时段：用素材自身时长
+        const ads = this.pickAdsForSlot('preroll', 9999);
+        const totalDur = ads.reduce((sum, ad) => sum + (ad.duration || 15), 0);
+        return this.playAdSlot('preroll', totalDur || 15);
     }
 
     // ========== 中贴片（多条连续播放） ==========
@@ -322,7 +430,14 @@ class MediaManager {
                 this._triggeredMidrolls.add(ad.id);
                 console.log('命中中贴片推广:', ad.name, '触发时间:', triggerTime + 's');
                 // 触发中贴片时段播放
-                this.playAdSlot('midroll', this.options.midrollDuration || 60);
+                const midDur = this.options.midrollDuration || 0;
+                if (midDur > 0) {
+                    this.playAdSlot('midroll', midDur);
+                } else {
+                    const midAds = this.pickAdsForSlot('midroll', 9999);
+                    const totalDur = midAds.reduce((s, a) => s + (a.duration || 15), 0);
+                    this.playAdSlot('midroll', totalDur || 15);
+                }
                 return true;
             }
         }
@@ -332,7 +447,13 @@ class MediaManager {
     // ========== 后贴片（多条连续播放） ==========
 
     async playPostRoll() {
-        return this.playAdSlot('postroll', this.options.postrollDuration || 60);
+        const slotDur = this.options.postrollDuration || 0;
+        if (slotDur > 0) {
+            return this.playAdSlot('postroll', slotDur);
+        }
+        const ads = this.pickAdsForSlot('postroll', 9999);
+        const totalDur = ads.reduce((sum, ad) => sum + (ad.duration || 15), 0);
+        return this.playAdSlot('postroll', totalDur || 15);
     }
     
     // ========== 跑马灯推广 ==========
@@ -368,11 +489,12 @@ class MediaManager {
         
         // 滚动文字
         const textEl = document.createElement('div');
+        const speed = ad.speed || 12;
         textEl.style.cssText = `
             white-space:nowrap;
             display:inline-block;
             padding-left:100%;
-            animation:marqueeScroll 12s linear infinite;
+            animation:marqueeScroll ${speed}s linear infinite;
             font-size:15px;color:${textColor};
             text-shadow:1px 1px 3px rgba(0,0,0,0.7), 0 0 8px rgba(0,0,0,0.4);
             font-weight:500;
@@ -426,6 +548,18 @@ class MediaManager {
                 @keyframes marqueeScroll {
                     0% { transform: translateX(0); }
                     100% { transform: translateX(-50%); }
+                }
+                @keyframes fadeIn {
+                    0% { opacity: 0; }
+                    100% { opacity: 1; }
+                }
+                @keyframes slideUp {
+                    0% { transform: translateY(30px); opacity: 0; }
+                    100% { transform: translateY(0); opacity: 1; }
+                }
+                @keyframes zoomIn {
+                    0% { transform: scale(0.8); opacity: 0; }
+                    100% { transform: scale(1); opacity: 1; }
                 }
             `;
             document.head.appendChild(style);
@@ -533,6 +667,13 @@ class MediaManager {
         promoVideoEl.setAttribute('playsinline', '');
         promoVideoEl.setAttribute('webkit-playsinline', '');
         promoVideoEl.loop = false;
+        promoVideoEl.style.cursor = 'pointer';
+        promoVideoEl.addEventListener('click', () => {
+            if (ad.click_url) {
+                window.open(ad.click_url, '_blank');
+                this.trackEvent('click');
+            }
+        });
         this.pauseOverlay.appendChild(promoVideoEl);
         
         // ③ 顶部信息栏
@@ -570,16 +711,16 @@ class MediaManager {
         
         const skipBtn = document.createElement('button');
         skipBtn.style.cssText = `
-            background:rgba(0,0,0,0.5);color:#fff;
-            border:1px solid rgba(255,255,255,0.3);
-            width:28px;height:28px;border-radius:50%;
-            font-size:14px;cursor:pointer;display:none;
+            background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);
+            border:1px solid rgba(255,255,255,0.2);
+            width:30px;height:30px;border-radius:50%;
+            font-size:15px;cursor:pointer;display:none;
             line-height:1;text-align:center;padding:0;
-            transition:background 0.2s;
+            transition:all 0.2s;backdrop-filter:blur(4px);
         `;
         skipBtn.textContent = '✕';
-        skipBtn.onmouseover = () => skipBtn.style.background = 'rgba(0,0,0,0.7)';
-        skipBtn.onmouseout = () => skipBtn.style.background = 'rgba(0,0,0,0.5)';
+        skipBtn.onmouseover = () => { skipBtn.style.background = 'rgba(255,255,255,0.3)'; skipBtn.style.color = '#fff'; };
+        skipBtn.onmouseout = () => { skipBtn.style.background = 'rgba(255,255,255,0.15)'; skipBtn.style.color = 'rgba(255,255,255,0.8)'; };
         skipBtn.onclick = () => this.endPausePromo();
         
         // 判断skippable
@@ -676,7 +817,14 @@ class MediaManager {
         if (ad.brand_logo) {
             const logo = document.createElement('img');
             logo.src = ad.brand_logo;
-            logo.style.cssText = 'width:30px;height:30px;border-radius:6px;object-fit:cover;';
+            logo.style.cssText = 'width:30px;height:30px;border-radius:6px;object-fit:cover;cursor:pointer;';
+            if (ad.click_url) {
+                logo.onclick = (e) => {
+                    e.stopPropagation();
+                    window.open(ad.click_url, '_blank');
+                    this.trackEvent('click');
+                };
+            }
             brandInfo.appendChild(logo);
         }
         
@@ -684,8 +832,16 @@ class MediaManager {
         brandNameEl.style.cssText = `
             color:#fff;font-size:14px;font-weight:500;
             white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+            ${ad.click_url ? 'cursor:pointer;' : ''}
         `;
         brandNameEl.textContent = ad.brand_name || ad.name;
+        if (ad.click_url) {
+            brandNameEl.onclick = (e) => {
+                e.stopPropagation();
+                window.open(ad.click_url, '_blank');
+                this.trackEvent('click');
+            };
+        }
         brandInfo.appendChild(brandNameEl);
         
         // CTA按钮
@@ -814,8 +970,67 @@ class MediaManager {
         this.promoVideo.src = mediaUrl;
         this.promoVideo.load();
         
-        // 更新信息
-        this.promoBadge.textContent = '推广';
+        // 获取装饰方案（如果有）
+        const deco = ad.decoration_id && this.decorationsMap ? this.decorationsMap[ad.decoration_id] : null;
+        
+        // 合并装饰设置（装饰方案优先，广告自身设置兜底）
+        const badgeText = deco ? deco.badge_text : (ad.badge_text || '推广');
+        const badgeColor = deco ? deco.badge_color : ad.badge_color;
+        const badgeTextColor = deco ? deco.badge_text_color : '#ffffff';
+        const progressColor = deco ? deco.progress_color : ad.progress_color;
+        const overlayOpacity = deco ? deco.overlay_opacity : (ad.overlay_opacity || '0.7');
+        const overlayGradient = deco ? deco.overlay_gradient : 'both';
+        const animation = deco ? deco.animation : (ad.animation || 'fade');
+        const textStroke = deco ? parseInt(deco.text_stroke) : (parseInt(ad.text_stroke) || 0);
+        const textShadowColor = deco ? deco.text_shadow_color : 'rgba(0,0,0,0.8)';
+        
+        // 应用角标
+        this.promoBadge.textContent = badgeText;
+        if (badgeColor) this.promoBadge.style.background = badgeColor;
+        if (badgeTextColor) this.promoBadge.style.color = badgeTextColor;
+        
+        // 应用进度条颜色
+        if (progressColor) this.progressFill.style.background = progressColor;
+        
+        // 应用遮罩透明度
+        const op = parseFloat(overlayOpacity) || 0.7;
+        if (overlayGradient === 'top') {
+            this.topBar.style.background = `linear-gradient(180deg,rgba(0,0,0,${op}) 0%,transparent 100%)`;
+            this.bottomBar.style.background = 'transparent';
+        } else if (overlayGradient === 'bottom') {
+            this.topBar.style.background = 'transparent';
+            this.bottomBar.style.background = `linear-gradient(0deg,rgba(0,0,0,${op}) 0%,transparent 100%)`;
+        } else {
+            this.topBar.style.background = `linear-gradient(180deg,rgba(0,0,0,${op}) 0%,transparent 100%)`;
+            this.bottomBar.style.background = `linear-gradient(0deg,rgba(0,0,0,${op+0.1}) 0%,transparent 100%)`;
+        }
+        
+        // 应用文字描边
+        if (textStroke > 0) {
+            const shadow = textStroke === 1 ? `1px 1px 2px ${textShadowColor}` : textStroke === 2 ? `1px 1px 3px ${textShadowColor},0 0 5px rgba(0,0,0,0.5)` : `1px 1px 4px ${textShadowColor},0 0 8px rgba(0,0,0,0.7),0 0 12px rgba(0,0,0,0.4)`;
+            this.brandName.style.textShadow = shadow;
+            this.countdownWrap.style.textShadow = shadow;
+        }
+        
+        // 应用入场动画
+        if (animation !== 'none') {
+            this.overlay.style.animation = '';
+            void this.overlay.offsetWidth; // 触发重绘
+            const anims = { fade: 'fadeIn 0.4s ease', slide: 'slideUp 0.4s ease', zoom: 'zoomIn 0.4s ease' };
+            this.overlay.style.animation = anims[animation] || anims.fade;
+        }
+        
+        // 应用自定义CSS
+        if (deco && deco.custom_css) {
+            if (!this._customStyleEl) {
+                this._customStyleEl = document.createElement('style');
+                document.head.appendChild(this._customStyleEl);
+            }
+            this._customStyleEl.textContent = deco.custom_css;
+        } else if (this._customStyleEl) {
+            this._customStyleEl.textContent = '';
+        }
+
         const duration = ad.duration || 5;
         this.countdownWrap.textContent = `${duration}秒`;
         
@@ -851,11 +1066,26 @@ class MediaManager {
             }, 5000);
         }
         
-        // 进度条
+        // 进度条（强制重绘确保 transition 重新触发）
         this.progressBar.style.display = 'block';
+        this.progressFill.style.transition = 'none';
         this.progressFill.style.width = '0%';
+        void this.progressFill.offsetWidth; // 强制重绘
         this.progressFill.style.transition = `width ${duration}s linear`;
-        setTimeout(() => this.progressFill.style.width = '100%', 100);
+        setTimeout(() => this.progressFill.style.width = '100%', 50);
+        
+        // 进度条跟随图标
+        if (ad.progress_icon) {
+            this.progressIcon.querySelector('img').src = ad.progress_icon;
+            this.progressIcon.style.display = 'block';
+            this.progressIcon.style.transition = 'none';
+            this.progressIcon.style.left = '0%';
+            void this.progressIcon.offsetWidth;
+            this.progressIcon.style.transition = `left ${duration}s linear`;
+            setTimeout(() => this.progressIcon.style.left = '100%', 50);
+        } else {
+            this.progressIcon.style.display = 'none';
+        }
         
         // 播放推广视频
         const playPromise = this.promoVideo.play();
@@ -892,13 +1122,15 @@ class MediaManager {
         };
         this.volumeBtn.style.display = 'flex';
         
-        // 倒计时
+        // 倒计时（只有独立播放时才设，多条连续时由playAdSlot管理）
         let remaining = duration;
-        this.timer = setInterval(() => {
-            remaining--;
-            this.countdownWrap.textContent = `${remaining}秒`;
-            if (remaining <= 0) this.endAd();
-        }, 1000);
+        if (!this._onAdComplete) {
+            this.timer = setInterval(() => {
+                remaining--;
+                this.countdownWrap.textContent = `${remaining}秒`;
+                if (remaining <= 0) this.endAd();
+            }, 1000);
+        }
         
         this.trackEvent('impression');
     }
@@ -923,6 +1155,7 @@ class MediaManager {
         this.promoVideo.src = '';
         this.overlay.style.display = 'none';
         this.progressBar.style.display = 'none';
+        this.progressIcon.style.display = 'none';
         
         this.isAdPlaying = false;
         this.currentAd = null;

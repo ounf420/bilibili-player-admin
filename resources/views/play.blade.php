@@ -45,6 +45,11 @@
         .player-logo.bottom-right { bottom: 70px; right: 20px; }
         .player-logo img { max-width: 120px; max-height: 40px; opacity: 0.7; }
         .player-logo .text-watermark { color: rgba(255,255,255,0.5); font-size: 14px; font-weight: 500; text-shadow: 0 1px 3px rgba(0,0,0,0.5); white-space: nowrap; user-select: none; }
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .player-logo { display: none !important; }
+            .dplayer { border-radius: 0; }
+        }
     </style>
 </head>
 <body>
@@ -130,10 +135,12 @@ function initPlayer(v) {
     if (videoUrl && !videoUrl.startsWith('http')) videoUrl = window.location.origin + videoUrl;
     const isHls = videoUrl.indexOf('.m3u8') !== -1;
     const isFlv = videoUrl.indexOf('.flv') !== -1;
+    const params = new URLSearchParams(location.search);
+    const autoplay = params.get('autoplay') !== '0'; // 默认自动播放，除非明确设置为0
     const dpOptions = {
         container: container,
-        autoplay: true,
-        theme: '#00be06',
+        autoplay: autoplay,
+        theme: params.get('theme') ? '#' + params.get('theme') : '#00be06',
         lang: 'zh-cn',
         screenshot: true,
         hotkey: true,
@@ -163,24 +170,30 @@ function initPlayer(v) {
                 }
             }
         },
-        danmaku: { id: v.id, api: '/api/danmaku', addition: [] }
+        danmaku: params.get('danmaku') === '1' ? { id: v.id, api: '/api/danmaku', addition: [] } : false
     };
     dp = new DPlayer(dpOptions);
     window.dp = dp;
     
     // 初始化广告引擎
-    mediaMgr = new MediaManager(dp, { enabled: true });
-    mediaMgr.onReady = function() {
-        // 开屏广告
-        mediaMgr.playSplash().then(function() {
-            // 开屏广告播完后播放前贴片
-            mediaMgr.playPreRoll();
-        });
-        // 启动角标广告随机展示
-        mediaMgr.startOverlayRotation();
-        // 显示跑马灯广告
-        mediaMgr.showMarquee();
-    };
+    const adEnabled = !window.__DISABLE_AD__;
+    mediaMgr = new MediaManager(dp, { enabled: adEnabled });
+    
+    if (adEnabled) {
+        mediaMgr.onReady = function() {
+            // 开屏广告
+            mediaMgr.playSplash().then(function() {
+                // 开屏广告播完后播放前贴片
+                mediaMgr.playPreRoll();
+            });
+            // 启动角标广告随机展示
+            mediaMgr.startOverlayRotation();
+            // 显示跑马灯广告
+            mediaMgr.showMarquee();
+        };
+    } else {
+        console.log('广告已通过参数禁用');
+    }
     
     // 监听播放进度，检查中贴片广告
     dp.on('timeupdate', function() {
@@ -215,6 +228,11 @@ async function init() {
     const params = new URLSearchParams(location.search);
     const videoUrl = params.get('url');
     const videoId = params.get('id');
+    const noAd = params.get('no_ad') === '1';
+    
+    // 设置全局广告开关
+    window.__DISABLE_AD__ = noAd;
+    
     if (videoUrl) {
         playDirectUrl(decodeURIComponent(videoUrl), params.get('title'));
     } else if (videoId) {

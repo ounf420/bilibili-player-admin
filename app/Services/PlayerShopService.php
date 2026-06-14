@@ -147,33 +147,46 @@ class PlayerShopService
     }
 
     /**
-     * 激活用户套餐版本
+     * 激活用户套餐版本（更新该用户所有播放器）
      */
     public function activatePlan($userId, $plan, $order)
     {
-        $user = \App\Models\User::find($userId);
-        if (!$user) return false;
-
-        // 更新用户版本等级
-        $user->level = $plan->level;
-
-        // 计算到期时间
-        if ($plan->duration_type === PlayerPlan::DURATION_PERMANENT) {
-            $user->expire_at = now()->addYears(100);
-        } else {
-            // 如果已有到期时间且未过期，在原基础上加
-            $baseTime = ($user->expire_at && $user->expire_at->isFuture()) 
-                ? $user->expire_at 
-                : now();
-            $user->expire_at = $baseTime->addDays($plan->duration_days);
+        // 套餐code到版本code的映射
+        $versionMap = [
+            'basic' => 'basic', 'basic_month' => 'basic', 'basic_quarter' => 'basic',
+            'basic_year' => 'basic', 'basic_forever' => 'basic',
+            'premium' => 'advanced', 'pro_month' => 'advanced', 'pro_quarter' => 'advanced',
+            'pro_year' => 'advanced', 'pro_forever' => 'advanced',
+            'ultimate' => 'flagship', 'ultimate_month' => 'flagship', 'ultimate_quarter' => 'flagship',
+            'ultimate_year' => 'flagship', 'ultimate_forever' => 'flagship',
+        ];
+        $versionCode = $versionMap[$plan->code] ?? 'free';
+        
+        // 更新该用户所有播放器的版本
+        $players = \App\Models\UserPlayer::where('user_id', $userId)->get();
+        foreach ($players as $player) {
+            // 计算版本到期时间
+            $versionExpireAt = null;
+            if ($plan->duration_type === 4) {
+                // 永久
+                $versionExpireAt = null;
+            } elseif ($plan->duration_days > 0) {
+                $baseTime = ($player->version_expire_at && $player->version_expire_at->isFuture())
+                    ? $player->version_expire_at
+                    : now();
+                $versionExpireAt = $baseTime->addDays($plan->duration_days);
+            }
+            
+            $player->update([
+                'version' => $versionCode,
+                'version_expire_at' => $versionExpireAt,
+            ]);
         }
-
-        $user->save();
 
         // 更新订单的开始和结束时间
         $order->update([
             'start_at' => now(),
-            'expire_at' => $user->expire_at,
+            'expire_at' => $players->first()?->version_expire_at,
         ]);
 
         return true;
@@ -184,10 +197,16 @@ class PlayerShopService
      */
     public function canCreatePlayer($userId)
     {
-        $user = \App\Models\User::find($userId);
+        // 检查是否有任何播放器是付费版本且未过期
+        $hasPaidPlayer = \App\Models\UserPlayer::where('user_id', $userId)
+            ->where('version', '!=', 'free')
+            ->where(function($q) {
+                $q->whereNull('version_expire_at')
+                  ->orWhere('version_expire_at', '>', now());
+            })
+            ->exists();
         
-        // 付费版用户不限数量
-        if ($user && $user->level > 0 && $user->expire_at && $user->expire_at->isFuture()) {
+        if ($hasPaidPlayer) {
             return ['can' => true, 'reason' => 'paid_user'];
         }
 
@@ -211,20 +230,26 @@ class PlayerShopService
     }
 
     /**
-     * 获取用户当前版本信息
+     * 获取用户当前版本信息（取最高版本的播放器）
      */
     public function getUserVersionInfo($userId)
     {
-        $user = \App\Models\User::find($userId);
         $quota = $this->getUserQuota($userId);
-
-        $isActive = $user->level > 0 && $user->expire_at && $user->expire_at->isFuture();
-
+        
+        // 取用户最高版本的播放器
+        $player = \App\Models\UserPlayer::where('user_id', $userId)
+            ->orderByRaw("FIELD(version, 'flagship', 'advanced', 'basic', 'free')")
+            ->first();
+        
+        $version = $player?->version ?? 'free';
+        $isActive = $player && $player->isVersionActive();
+        $levelMap = ['free' => 0, 'basic' => 1, 'advanced' => 2, 'flagship' => 3];
+        
         return [
-            'level' => $user->level,
-            'expire_at' => $user->expire_at,
+            'level' => $levelMap[$version] ?? 0,
+            'expire_at' => $player?->version_expire_at,
             'is_active' => $isActive,
-            'level_text' => $isActive ? ['免费版', '基础版', '专业版', '旗舰版'][$user->level] ?? '免费版' : '免费版',
+            'level_text' => $isActive ? ['免费版', '基础版', '高级版', '旗舰版'][$levelMap[$version] ?? 0] ?? '免费版' : '免费版',
             'total_quota' => $quota->total_quota,
             'used_quota' => $quota->used_quota,
             'available_quota' => $quota->available_quota,

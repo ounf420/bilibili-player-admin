@@ -225,6 +225,75 @@ class AdForm
                     ])
                     ->visible(fn ($get) => in_array($get('type'), ['interactive', 'shake'])),
 
+                // ========== 广告装饰 ==========
+                Section::make('🎨 广告装饰')
+                    ->schema([
+                        Select::make('decoration_id')
+                            ->label('选择装饰方案')
+                            ->options(\App\Models\Decoration::where('enabled', true)->orderBy('sort_order', 'desc')->pluck('name', 'id'))
+                            ->placeholder('不使用装饰方案')
+                            ->helperText('选择一个装饰方案，或留空使用下方自定义设置')
+                            ->searchable(),
+
+                        Grid::make(3)
+                            ->schema([
+                                TextInput::make('badge_text')
+                                    ->label('角标文字')
+                                    ->default('推广')
+                                    ->placeholder('推广')
+                                    ->helperText('广告左上角标签，如"广告""赞助""推广"'),
+
+                                TextInput::make('badge_color')
+                                    ->label('角标背景色')
+                                    ->default('rgba(255,255,255,0.15)')
+                                    ->placeholder('rgba(255,255,255,0.15)'),
+
+                                TextInput::make('progress_color')
+                                    ->label('进度条颜色')
+                                    ->default('#00c853')
+                                    ->placeholder('#00c853')
+                                    ->helperText('倒计时进度条的填充色'),
+                            ]),
+
+                        Grid::make(3)
+                            ->schema([
+                                Select::make('overlay_opacity')
+                                    ->label('遮罩透明度')
+                                    ->options([
+                                        '0.5' => '浅 (0.5)',
+                                        '0.6' => '较浅 (0.6)',
+                                        '0.7' => '标准 (0.7)',
+                                        '0.8' => '较深 (0.8)',
+                                        '0.9' => '深 (0.9)',
+                                        '1.0' => '全黑 (1.0)',
+                                    ])
+                                    ->default('0.7'),
+
+                                Select::make('animation')
+                                    ->label('入场动画')
+                                    ->options([
+                                        'none' => '无动画',
+                                        'fade' => '淡入',
+                                        'slide' => '滑入',
+                                        'zoom' => '缩放',
+                                    ])
+                                    ->default('fade'),
+
+                                Select::make('text_stroke')
+                                    ->label('文字描边')
+                                    ->options([
+                                        '0' => '无描边',
+                                        '1' => '轻描边',
+                                        '2' => '中描边',
+                                        '3' => '重描边',
+                                    ])
+                                    ->default('0')
+                                    ->helperText('增加文字可读性'),
+                            ]),
+                    ])
+                    ->visible(fn ($get) => !in_array($get('type'), ['marquee', 'overlay']))
+                    ->collapsible(),
+
                 // ========== 品牌信息（通用） ==========
                 Section::make('💎 品牌信息')
                     ->schema([

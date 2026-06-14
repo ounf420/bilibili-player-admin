@@ -3,42 +3,24 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class PlayerPlan extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
-        'name',
-        'code',
-        'level',
-        'duration_type',
-        'duration_days',
-        'price',
-        'sale_price',
-        'features',
-        'badge',
-        'is_active',
-        'sort_order',
+        'name', 'code', 'type', 'level', 'duration_type', 'duration_days',
+        'price', 'sale_price', 'price_monthly', 'price_yearly',
+        'price_permanent', 'player_limit', 'features', 'description',
+        'badge', 'is_active', 'sort_order',
     ];
 
     protected $casts = [
         'features' => 'array',
         'is_active' => 'boolean',
-        'price' => 'decimal:2',
-        'sale_price' => 'decimal:2',
     ];
 
-    // 时长类型常量
-    const DURATION_MONTH = 1;
-    const DURATION_QUARTER = 2;
-    const DURATION_YEAR = 3;
-    const DURATION_PERMANENT = 4;
-
-    // 版本等级常量
+    const LEVEL_FREE = 0;
     const LEVEL_BASIC = 1;
-    const LEVEL_PRO = 2;
+    const LEVEL_PREMIUM = 2;
     const LEVEL_ULTIMATE = 3;
 
     public function scopeActive($query)
@@ -46,29 +28,60 @@ class PlayerPlan extends Model
         return $query->where('is_active', true);
     }
 
-    public function scopeByLevel($query, $level)
+    public function hasFeature(string $feature): bool
     {
-        return $query->where('level', $level);
+        return in_array($feature, $this->features ?? []);
     }
 
-    public function getDurationTypeTextAttribute()
+    /**
+     * 检查是否支持某功能（基于 features 数组的 key-value）
+     */
+    public function canDo(string $feature): bool
     {
-        return match ($this->duration_type) {
-            self::DURATION_MONTH => '月',
-            self::DURATION_QUARTER => '季',
-            self::DURATION_YEAR => '年',
-            self::DURATION_PERMANENT => '永久',
+        $features = $this->features ?? [];
+        return isset($features[$feature]) && $features[$feature] === true;
+    }
+
+    /**
+     * 获取版本等级文本
+     */
+    public function getLevelTextAttribute(): string
+    {
+        return match ($this->level) {
+            self::LEVEL_FREE => '免费版',
+            self::LEVEL_BASIC => '基础版',
+            self::LEVEL_PREMIUM => '高级版',
+            self::LEVEL_ULTIMATE => '旗舰版',
             default => '未知',
         };
     }
 
-    public function getLevelTextAttribute()
+    /**
+     * 获取时长类型文本
+     */
+    public function getDurationTypeTextAttribute(): string
+    {
+        return match ($this->duration_type) {
+            0 => '无期限',
+            1 => '月卡',
+            2 => '季卡',
+            3 => '年卡',
+            4 => '永久',
+            default => '-',
+        };
+    }
+
+    /**
+     * 获取版本颜色
+     */
+    public function getLevelColorAttribute(): string
     {
         return match ($this->level) {
-            self::LEVEL_BASIC => '基础版',
-            self::LEVEL_PRO => '专业版',
-            self::LEVEL_ULTIMATE => '旗舰版',
-            default => '未知',
+            self::LEVEL_FREE => '#94a3b8',
+            self::LEVEL_BASIC => '#3b82f6',
+            self::LEVEL_PREMIUM => '#8b5cf6',
+            self::LEVEL_ULTIMATE => '#f59e0b',
+            default => '#94a3b8',
         };
     }
 }

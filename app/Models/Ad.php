@@ -57,6 +57,13 @@ class Ad extends Model
         'impressions',
         'clicks',
         'skips',
+        'badge_text',
+        'badge_color',
+        'progress_color',
+        'overlay_opacity',
+        'animation',
+        'text_stroke',
+        'decoration_id',
     ];
     
     protected $casts = [
@@ -67,4 +74,9 @@ class Ad extends Model
         'options' => 'array',
         'results' => 'array',
     ];
+
+    public function decoration()
+    {
+        return $this->belongsTo(Decoration::class, 'decoration_id');
+    }
 }

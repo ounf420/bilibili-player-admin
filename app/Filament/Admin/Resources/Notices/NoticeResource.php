@@ -23,6 +23,8 @@ class NoticeResource extends Resource
 
     protected static ?string $navigationLabel = '公告管理';
 
+    protected static string|\UnitEnum|null $navigationGroup = '内容管理';
+
     protected static ?string $modelLabel = '公告';
 
     protected static ?string $pluralModelLabel = '公告';
